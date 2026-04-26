@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html
+  lang="en"
+  class="theme-editorial"
+  data-theme="editorial"
+  style="height:100%; overflow-x:hidden;"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content={get_csrf_token()} />
+    <title><%= assigns[:page_title] || "ChatApp" %></title>
+    <%!-- Google Fonts: IBM Plex Sans, IBM Plex Mono, Fraunces, Cormorant Garamond --%>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,560;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
+    </script>
+    <script>
+      (() => {
+        const themes = ["swiss", "mid-century", "techno-brutalist", "editorial"];
+        const themeClasses = themes.map((theme) => `theme-${theme}`);
+
+        const setTheme = (theme = "editorial") => {
+          const nextTheme = ["aurora", "luxury-typography", "art-deco"].includes(theme)
+            ? "editorial"
+            : (themes.includes(theme) ? theme : "editorial");
+          document.documentElement.classList.remove(...themeClasses);
+          document.documentElement.classList.add(`theme-${nextTheme}`);
+          document.documentElement.dataset.theme = nextTheme;
+          localStorage.setItem("phx:theme", nextTheme);
+        };
+
+        setTheme(localStorage.getItem("phx:theme") || document.documentElement.dataset.theme);
+        window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue));
+
+        window.addEventListener("phx:set-theme", (e) => {
+          const trigger = e.target.closest("[data-phx-theme]");
+          setTheme(trigger?.dataset.phxTheme);
+        });
+      })();
+    </script>
+  </head>
+  <body class="bg-background text-foreground" style="height:100%; overflow:hidden;">
+    <%= @inner_content %>
+  </body>
+</html>

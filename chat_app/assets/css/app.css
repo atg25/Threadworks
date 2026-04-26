@@ -1,0 +1,30 @@
+/* ─── Tailwind base ─────────────────────────────────────────── */
+@import "tailwindcss";
+
+/* ─── Phoenix templates live outside assets/ when Vite builds ─ */
+@source "../../lib";
+@source "../../test";
+
+/* ─── Tailwind v4 plugins (use @plugin, not tailwind.config.js) */
+@plugin "../vendor/heroicons.js";
+@plugin "@tailwindcss/typography";
+@plugin "tailwindcss-animate";
+
+/* ─── Design system (order is load-order-sensitive) ─────────── */
+@import "./foundation.css";
+@import "./shell.css";
+@import "./utilities.css";
+@import "./chat.css";
+
+/* ─── Font family custom property bindings ───────────────────
+   Must be declared so foundation.css --font-body/display/mono
+   can resolve. Google Fonts link tag loads the actual faces.   */
+:root {
+  --font-ibm-plex-sans: "IBM Plex Sans", sans-serif;
+  --font-ibm-plex-mono: "IBM Plex Mono", monospace;
+  --font-fraunces: "Fraunces", serif;
+  --font-cormorant-garamond: "Cormorant Garamond", serif;
+}
+
+/* ─── Dark mode: class-based (not prefers-color-scheme) ─────── */
+@custom-variant dark (&:where(.dark, .dark *));

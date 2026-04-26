@@ -1,0 +1,918 @@
+/* =========================================================
+   CSS Custom Properties — Design System Tokens
+   ========================================================= */
+
+@property --background {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: oklch(0.98 0.01 250);
+}
+
+@property --foreground {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: oklch(0.21 0.01 250);
+}
+
+@property --surface {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: oklch(1 0 0);
+}
+
+@property --surface-muted {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: oklch(0.96 0.020 265);
+}
+
+@property --accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: oklch(0.42 0.12 280);
+}
+
+@property --accent-interactive {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: oklch(0.42 0.12 280);
+}
+
+@property --border {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: oklch(0.9 0.01 250);
+}
+
+@property --text {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: oklch(0.21 0.01 250);
+}
+
+@property --space-0 { syntax: "<length>"; inherits: true; initial-value: 0; }
+
+/* --- Spacing Ladder --- */
+@property --space-1 { syntax: "<length>"; inherits: true; initial-value: 0.25rem; }
+
+@property --space-2 { syntax: "<length>"; inherits: true; initial-value: 0.5rem; }
+
+@property --space-3 { syntax: "<length>"; inherits: true; initial-value: 0.75rem; }
+
+@property --space-4 { syntax: "<length>"; inherits: true; initial-value: 1rem; }
+
+@property --space-6 { syntax: "<length>"; inherits: true; initial-value: 1.5rem; }
+
+@property --space-8 { syntax: "<length>"; inherits: true; initial-value: 2rem; }
+
+@property --space-10 { syntax: "<length>"; inherits: true; initial-value: 2.5rem; }
+
+@property --space-12 { syntax: "<length>"; inherits: true; initial-value: 3rem; }
+
+@property --space-16 { syntax: "<length>"; inherits: true; initial-value: 4rem; }
+
+/* --- Stack Roles --- */
+@property --space-stack-tight { syntax: "<length>"; inherits: true; initial-value: 0.5rem; }
+
+@property --space-stack-default { syntax: "<length>"; inherits: true; initial-value: 1rem; }
+
+@property --space-stack-loose { syntax: "<length>"; inherits: true; initial-value: 1.5rem; }
+
+@property --space-stack-section { syntax: "<length>"; inherits: true; initial-value: 2rem; }
+
+/* --- Cluster Roles --- */
+@property --space-cluster-tight { syntax: "<length>"; inherits: true; initial-value: 0.5rem; }
+
+@property --space-cluster-default { syntax: "<length>"; inherits: true; initial-value: 1rem; }
+
+@property --space-cluster-actions { syntax: "<length>"; inherits: true; initial-value: 1.5rem; }
+
+/* --- Inset Roles --- */
+@property --space-inset-tight { syntax: "<length>"; inherits: true; initial-value: 0.5rem; }
+
+@property --space-inset-compact { syntax: "<length>"; inherits: true; initial-value: 0.75rem; }
+
+@property --space-inset-default { syntax: "<length>"; inherits: true; initial-value: 1rem; }
+
+@property --space-inset-panel { syntax: "<length>"; inherits: true; initial-value: 1.5rem; }
+
+@property --space-inset-menu { syntax: "<length>"; inherits: true; initial-value: 1rem; }
+
+/* --- Rail Roles --- */
+@property --space-rail-gap { syntax: "<length>"; inherits: true; initial-value: 0.75rem; }
+
+@property --space-rail-item-gap { syntax: "<length>"; inherits: true; initial-value: 0.5rem; }
+
+@property --space-rail-item-inline { syntax: "<length>"; inherits: true; initial-value: 1rem; }
+
+@property --space-rail-item-block { syntax: "<length>"; inherits: true; initial-value: 0.75rem; }
+
+/* --- Section Roles --- */
+@property --space-section-tight { syntax: "<length>"; inherits: true; initial-value: 1.5rem; }
+
+@property --space-section-default { syntax: "<length>"; inherits: true; initial-value: 2rem; }
+
+@property --space-section-loose { syntax: "<length>"; inherits: true; initial-value: 3rem; }
+
+/* --- Page Frame Roles --- */
+@property --space-frame-compact { syntax: "<length>"; inherits: true; initial-value: 1rem; }
+
+@property --space-frame-default { syntax: "<length>"; inherits: true; initial-value: 2rem; }
+
+@property --space-frame-wide { syntax: "<length>"; inherits: true; initial-value: 4rem; }
+
+:root {
+  --glass-sublayer: oklch(0.96 0.012 85);
+  --background: oklch(0.985 0.018 85);
+  --foreground: oklch(0.16 0.025 295);
+  --surface: oklch(1 0.004 85);
+  --surface-hover: oklch(0.965 0.012 85);
+  --surface-muted: oklch(0.95 0.022 75);
+  --border: oklch(0.86 0.018 85);
+  --text: oklch(0.16 0.025 295);
+  --accent: oklch(0.55 0.24 295);
+  --accent-interactive: oklch(0.52 0.26 295);
+  --accent-foreground: oklch(0.99 0 0);
+  --accent-secondary: oklch(0.78 0.16 75);
+  --accent-secondary-foreground: oklch(0.16 0.025 295);
+  --ink: oklch(0.13 0.02 295);
+  --ink-foreground: oklch(0.985 0.012 85);
+
+  /* Spacing Ladder Foundation */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* Semantic Layout Roles */
+  --space-stack-tight: var(--space-2);
+  --space-stack-default: var(--space-4);
+  --space-stack-loose: var(--space-6);
+  --space-stack-section: var(--space-8);
+
+  --space-cluster-tight: var(--space-2);
+  --space-cluster-default: var(--space-4);
+  --space-cluster-actions: var(--space-6);
+
+  --space-inset-tight: var(--space-2);
+  --space-inset-compact: var(--space-3);
+  --space-inset-default: var(--space-4);
+  --space-inset-panel: var(--space-6);
+  --space-inset-menu: var(--space-4);
+
+  --space-rail-gap: var(--space-3);
+  --space-rail-item-gap: var(--space-2);
+  --space-rail-item-inline: var(--space-4);
+  --space-rail-item-block: var(--space-3);
+
+  --space-section-tight: var(--space-6);
+  --space-section-default: var(--space-8);
+  --space-section-loose: var(--space-12);
+
+  --space-frame-compact: var(--space-4);
+  --space-frame-default: var(--space-8);
+  --space-frame-wide: var(--space-16);
+
+  /* Shell and chat surface spacing consumers resolve from the global role layer. */
+  --container-padding: var(--space-frame-default);
+  --input-padding: var(--space-inset-compact);
+  --chat-fold-gutter: var(--space-section-tight);
+  --chat-composer-gap: var(--space-stack-default);
+  --chat-scroll-cta-offset: calc(var(--space-frame-default) + var(--space-2));
+  --chat-suggestion-stack-clearance: var(--space-section-default);
+  --chat-avatar-size: 2rem;
+  --chat-bubble-padding-inline: var(--space-inset-default);
+  --chat-bubble-padding-block: var(--space-inset-compact);
+  --chat-suggestion-frame-padding-inline: var(--space-inset-panel);
+  --chat-suggestion-frame-padding-block: var(--space-inset-default);
+  --chat-suggestion-frame-inner-padding: var(--space-inset-compact);
+  --chat-followup-frame-padding-inline: var(--space-inset-default);
+  --chat-followup-frame-padding-block: var(--space-inset-compact);
+  --chat-composer-button-padding-inline: var(--space-inset-default);
+  --chat-composer-button-padding-block: var(--space-2);
+
+  --border-radius: 1rem;
+  --border-width: 1px;
+  --border-color: var(--border);
+  --accent-color: var(--accent);
+  --shadow-sm: 0 4px 20px -2px rgb(0 0 0 / 0.05);
+  --shadow-base: oklch(0.15 0.01 250);
+  --highlight-base: white;
+
+  --font-body: var(--font-ibm-plex-sans, sans-serif);
+  --font-display: var(--font-fraunces, serif);
+  --font-mono: var(--font-ibm-plex-mono, monospace);
+  --font-base: var(--font-body);
+  --font-label: var(--font-body);
+
+  --phi-4: 0.146rem;
+  --phi-3: 0.236rem;
+  --phi-2: 0.382rem;
+  --phi-1: 0.618rem;
+  --phi-0: 1rem;
+  --phi-1p: 1.618rem;
+  --phi-2p: 2.618rem;
+  --phi-3p: 4.236rem;
+  --phi-4p: 6.854rem;
+
+  --container-width: 72rem;
+  --content-width: 48rem;
+  --narrow-width: 24rem;
+  --measure-comfortable: 64ch;
+  --measure-compact: 52ch;
+  --font-size-base: 1rem;
+  --line-height-base: 1.55;
+  --letter-spacing-base: -0.005em;
+
+  --viewport-block-size: 100vh;
+  --viewport-inline-size: 100vw;
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --safe-area-padding-top: max(var(--space-4), var(--safe-area-inset-top));
+  --safe-area-padding-right: max(var(--space-8), var(--safe-area-inset-right));
+  --safe-area-padding-bottom: max(var(--space-4), var(--safe-area-inset-bottom));
+  --safe-area-padding-left: max(var(--space-8), var(--safe-area-inset-left));
+  --fab-offset-inline: max(1.5rem, var(--safe-area-inset-right));
+  --fab-offset-inline-start: max(1.5rem, var(--safe-area-inset-left));
+  --fab-offset-block: max(1.5rem, calc(var(--safe-area-inset-bottom) + var(--space-2)));
+  --fab-launcher-size: 4.5rem;
+  --fab-launcher-icon-shell-size: 2.25rem;
+  --fab-default-shell-inline-size: min(30rem, calc(100vw - var(--fab-offset-inline-start) - var(--fab-offset-inline)));
+  --fab-default-shell-block-size: min(820px, calc(var(--viewport-block-size) - max(1.5rem, var(--safe-area-inset-top)) - var(--fab-offset-block) - 1.5rem));
+  --fab-default-shell-radius: var(--fva-shell-radius-frame);
+  --shell-floating-chat-clearance-block: calc(var(--fab-launcher-size) + var(--fab-offset-block) + var(--space-section-tight));
+
+  --page-shell-accent-position: top;
+  --page-shell-accent-strength: 8%;
+  --page-shell-accent-falloff: 40%;
+  --page-shell-foreground-position: 20% 30%;
+  --page-shell-foreground-strength: 2%;
+  --page-shell-foreground-falloff: 22%;
+  --page-shell-linear-surface: linear-gradient(180deg,
+    color-mix(in oklab, var(--background) 94%, white) 0%,
+    var(--background) 100%);
+  --page-shell-accent-layer: radial-gradient(circle at var(--page-shell-accent-position),
+    color-mix(in oklab, var(--accent) var(--page-shell-accent-strength), transparent),
+    transparent var(--page-shell-accent-falloff));
+  --page-shell-foreground-layer: radial-gradient(circle at var(--page-shell-foreground-position),
+    color-mix(in oklab, var(--foreground) var(--page-shell-foreground-strength), transparent),
+    transparent var(--page-shell-foreground-falloff));
+  --page-shell-background: var(--page-shell-accent-layer), var(--page-shell-foreground-layer), var(--page-shell-linear-surface);
+
+  --status-success: oklch(0.62 0.20 155);
+  --status-error: oklch(0.47 0.24 15);
+
+
+  --hero-intro-stack-gap: 1.15rem;
+  --hero-stack-kicker: var(--space-3);
+  --hero-stack-body: var(--space-6);
+  --hero-stack-section: var(--space-10);
+  --hero-badge-gap: var(--phi-2);
+  --hero-badge-padding-inline: 0.8rem;
+  --hero-badge-padding-block: 0.28rem;
+  --hero-title-max-width: 17ch;
+  --hero-greeting-max-width: 38rem;
+  --chat-content-width: 46rem;
+  --chat-bubble-max-measure: 62ch;
+  --brand-mark-size: 2.4rem;
+  --brand-wordmark-size: 1.55rem;
+  --brand-status-dot: 0.5rem;
+  --hero-chip-cluster-gap: 0.5rem;
+  --hero-composer-offset: 0.9rem;
+  --hero-chip-band-padding: var(--phi-1);
+  --hero-suggestion-stack-gap: 0.65rem;
+  --hero-suggestion-max-width: 40.5rem;
+  --hero-suggestion-frame-radius: 2.1rem;
+  --hero-suggestion-frame-padding-inline: 0.85rem;
+  --hero-suggestion-frame-padding-block: 0.65rem;
+  --hero-suggestion-row-gap: 0.55rem;
+  --hero-suggestion-chip-height: 2.75rem;
+  --hero-suggestion-chip-padding-inline: 1.1rem;
+  --hero-suggestion-chip-padding-block: 0.55rem;
+  --hero-composer-field-padding-inline: 0.5rem;
+  --hero-composer-field-padding-block: 0.9rem;
+  --chat-message-meta-gap: var(--space-stack-tight);
+  --chat-message-indent: var(--space-10);
+  --chat-suggestion-frame-radius: var(--fva-shell-radius-panel);
+  --chat-composer-radius: var(--fva-shell-radius-composer);
+  --chat-composer-min-height: calc(2.75rem + (var(--input-padding) * 2));
+  --chat-composer-field-padding-inline: var(--space-2);
+  --chat-composer-field-padding-block: var(--space-3);
+  --chat-bubble-padding-block-prominent: calc(var(--space-inset-compact) + var(--space-2));
+  --chat-followup-chip-height: calc(var(--space-8) + var(--space-1));
+  --chat-followup-chip-padding-inline: var(--space-3);
+  --chat-followup-chip-padding-block: var(--space-1);
+  --tier-micro-size: 0.66rem;
+  --tier-micro-line-height: 1.15;
+  --tier-micro-tracking: 0.16em;
+  --tier-body-size: 1.02rem;
+  --tier-body-line-height: 1.55;
+  --tier-display-size: clamp(3.2rem, 6vw, 5.4rem);
+  --tier-display-line-height: 0.92;
+  --tier-display-tracking: -0.055em;
+  --tier-brand-size: 1.18rem;
+  --tier-nav-label-size: 0.74rem;
+  --tier-nav-label-tracking: 0.1em;
+  --chat-composer-helper-font-size: 0.6rem;
+  --chat-composer-helper-line-height: 1.2;
+  --hero-badge-font-size: var(--tier-micro-size);
+  --hero-title-font-size: var(--tier-display-size);
+  --hero-title-line-height: var(--tier-display-line-height);
+  --hero-body-font-size: var(--tier-body-size);
+  --hero-body-line-height: 1.55;
+
+  --fva-shell-surface: linear-gradient(180deg,
+    color-mix(in oklab, var(--surface) 98%, var(--background)) 0%,
+    color-mix(in oklab, var(--surface) 94%, var(--background)) 100%);
+  --fva-shell-panel-surface: color-mix(in oklab, var(--surface) 96%, var(--background));
+  --fva-shell-bubble-surface: linear-gradient(180deg,
+    color-mix(in oklab, var(--surface) 99%, var(--background)) 0%,
+    color-mix(in oklab, var(--surface) 95%, var(--background)) 100%);
+  --fva-shell-transcript-surface: linear-gradient(180deg,
+    color-mix(in oklab, var(--surface) 97%, var(--background)) 0%,
+    color-mix(in oklab, var(--surface) 93%, var(--background)) 100%);
+  --fva-shell-transcript-backdrop: radial-gradient(circle at top, color-mix(in oklab, var(--highlight-base) 12%, transparent), transparent 64%);
+  --fva-shell-assistant-anchor-surface: linear-gradient(180deg,
+    color-mix(in oklab, var(--surface) 100%, var(--background)) 0%,
+    color-mix(in oklab, var(--surface) 96%, var(--background)) 100%);
+  --fva-shell-user-surface: linear-gradient(180deg,
+    color-mix(in oklab, var(--accent) 8%, var(--surface)) 0%,
+    color-mix(in oklab, var(--accent) 4%, var(--surface)) 100%);
+  --fva-shell-chip-surface: color-mix(in oklab, var(--surface) 94%, var(--background));
+  --fva-shell-action-secondary-surface: color-mix(in oklab, var(--surface) 98%, var(--background));
+  --fva-shell-composer-surface: linear-gradient(180deg,
+    color-mix(in oklab, var(--background) 84%, transparent) 0%,
+    color-mix(in oklab, var(--background) 95%, transparent) 100%);
+  --fva-shell-composer-plane-surface: linear-gradient(180deg,
+    color-mix(in oklab, var(--background) 74%, transparent) 0%,
+    color-mix(in oklab, var(--background) 96%, transparent) 48%,
+    color-mix(in oklab, var(--surface) 96%, var(--background)) 100%);
+  --fva-shell-composer-plane-seam: color-mix(in oklab, var(--foreground) 8%, transparent);
+  --fva-shell-composer-field-surface: color-mix(in oklab, var(--surface) 88%, transparent);
+  --fva-shell-composer-frame-border: color-mix(in oklab, var(--foreground) 10%, var(--border));
+  --fva-shell-composer-frame-border-hover: color-mix(in oklab, var(--foreground) 12%, var(--border));
+  --fva-shell-composer-frame-border-focus: color-mix(in oklab, var(--foreground) 14%, var(--border));
+  --fva-shell-composer-frame-shadow: 0 22px 40px -34px color-mix(in oklab, var(--shadow-base) 26%, transparent);
+  --fva-shell-composer-frame-focus-shadow:
+    0 24px 44px -32px color-mix(in oklab, var(--shadow-base) 34%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--highlight-base) 10%, transparent);
+  --fva-shell-composer-field-ring: color-mix(in oklab, var(--foreground) 7%, var(--border));
+  --fva-shell-composer-field-active-ring: color-mix(in oklab, var(--foreground) 16%, var(--border));
+  --fva-shell-attach-idle: color-mix(in oklab, var(--foreground) 48%, transparent);
+  --fva-shell-attach-hover-surface: color-mix(in oklab, var(--surface) 96%, var(--background));
+  --fva-shell-attach-hover-tone: color-mix(in oklab, var(--foreground) 72%, transparent);
+  --fva-shell-send-idle-surface: color-mix(in oklab, var(--surface) 72%, transparent);
+  --fva-shell-send-idle-tone: color-mix(in oklab, var(--foreground) 42%, transparent);
+  --fva-shell-send-disabled-surface: color-mix(in oklab, var(--surface-muted) 92%, var(--background));
+  --fva-shell-send-disabled-tone: color-mix(in oklab, var(--foreground) 38%, transparent);
+  --fva-shell-header-surface: linear-gradient(180deg,
+    color-mix(in oklab, var(--surface) 99%, var(--background)) 0%,
+    color-mix(in oklab, var(--surface) 93%, var(--background)) 100%);
+  --fva-shell-chrome-surface: color-mix(in oklab, var(--surface) 92%, var(--background));
+  --fva-shell-border-strong: color-mix(in oklab, var(--foreground) 12%, var(--border));
+  --fva-shell-border-soft: color-mix(in oklab, var(--foreground) 7%, var(--border));
+  --fva-shell-text-strong: color-mix(in oklab, var(--foreground) 92%, transparent);
+  --fva-shell-text-muted: color-mix(in oklab, var(--foreground) 64%, transparent);
+  --fva-shell-helper-muted: color-mix(in oklab, var(--foreground) 52%, transparent);
+  --fva-shell-action-primary: color-mix(in oklab, var(--foreground) 94%, var(--accent));
+  --fva-shell-action-muted: color-mix(in oklab, var(--foreground) 28%, transparent);
+  --fva-shell-send-ready: color-mix(in oklab, var(--foreground) 96%, var(--accent));
+  --fva-shell-radius-frame: 2rem;
+  --fva-shell-radius-panel: 1.45rem;
+  --fva-shell-radius-chip: 999px;
+  --fva-shell-radius-composer: 2rem;
+  --fva-shell-radius-composer-field: 1.5rem;
+  --fva-shell-radius-control: 999px;
+  --fva-shell-header-gap: var(--phi-1);
+  --fva-shell-stack-gap: var(--phi-1);
+}
+
+
+
+@supports (height: 100dvh) {
+  :root {
+    --viewport-block-size: 100dvh;
+  }
+}
+
+[data-density="compact"] {
+  /* Semantic Layout Shifts */
+  --space-stack-tight: var(--space-1);
+  --space-stack-default: var(--space-3);
+  --space-stack-loose: var(--space-4);
+  --space-stack-section: var(--space-6);
+  --space-cluster-default: var(--space-3);
+  --space-cluster-actions: var(--space-4);
+  --space-inset-tight: var(--space-1);
+  --space-inset-compact: var(--space-2);
+  --space-inset-default: var(--space-3);
+  --space-inset-panel: var(--space-4);
+  --space-rail-gap: var(--space-2);
+  --space-rail-item-gap: var(--space-1);
+  --space-rail-item-inline: var(--space-3);
+  --space-rail-item-block: var(--space-2);
+  --space-section-tight: var(--space-4);
+  --space-section-default: var(--space-6);
+  --space-section-loose: var(--space-8);
+  --space-frame-compact: var(--space-3);
+  --space-frame-default: var(--space-4);
+  --space-frame-wide: var(--space-8);
+
+  --container-padding: var(--space-frame-default);
+  --input-padding: var(--space-inset-compact);
+  --chat-fold-gutter: var(--space-section-tight);
+  --chat-composer-gap: var(--space-stack-default);
+  --chat-scroll-cta-offset: var(--space-frame-default);
+  --chat-suggestion-stack-clearance: var(--space-section-tight);
+  --chat-avatar-size: 1.75rem;
+  --tier-brand-size: 1.08rem;
+  --tier-nav-label-size: 0.68rem;
+  --chat-composer-helper-font-size: 0.56rem;
+  --chat-composer-helper-line-height: 1.15;
+  --chat-bubble-padding-inline: var(--space-inset-default);
+  --chat-bubble-padding-block: var(--space-inset-compact);
+  --chat-suggestion-frame-padding-inline: var(--space-inset-default);
+  --chat-suggestion-frame-padding-block: var(--space-inset-compact);
+  --chat-suggestion-frame-inner-padding: var(--space-2);
+  --chat-followup-frame-padding-inline: var(--space-inset-compact);
+  --chat-followup-frame-padding-block: var(--space-2);
+  --chat-composer-button-padding-inline: var(--space-inset-default);
+  --chat-composer-button-padding-block: var(--space-2);
+  --chat-message-meta-gap: var(--space-1);
+  --chat-message-indent: var(--space-8);
+  --chat-composer-field-padding-inline: var(--space-1);
+  --chat-composer-field-padding-block: var(--space-2);
+  --chat-followup-chip-height: var(--space-8);
+  --chat-followup-chip-padding-inline: var(--space-3);
+  --chat-followup-chip-padding-block: var(--space-1);
+}
+
+[data-density="relaxed"] {
+  /* Semantic Layout Shifts */
+  --space-stack-tight: var(--space-3);
+  --space-stack-default: var(--space-6);
+  --space-stack-loose: var(--space-8);
+  --space-stack-section: var(--space-12);
+  --space-cluster-default: var(--space-6);
+  --space-cluster-actions: var(--space-8);
+  --space-inset-tight: var(--space-3);
+  --space-inset-default: var(--space-6);
+  --space-inset-panel: var(--space-8);
+  --space-rail-gap: var(--space-4);
+  --space-rail-item-gap: var(--space-3);
+  --space-rail-item-inline: var(--space-6);
+  --space-rail-item-block: var(--space-4);
+  --space-section-tight: var(--space-8);
+  --space-section-default: var(--space-12);
+  --space-section-loose: var(--space-16);
+  --space-frame-default: var(--space-12);
+  --space-frame-wide: var(--space-16);
+
+  --container-padding: var(--space-frame-default);
+  --input-padding: var(--space-inset-panel);
+  --chat-fold-gutter: var(--space-frame-wide);
+  --chat-composer-gap: var(--space-stack-loose);
+  --chat-scroll-cta-offset: calc(var(--space-frame-default) + var(--space-4));
+  --chat-suggestion-stack-clearance: var(--space-section-default);
+  --chat-avatar-size: 2.25rem;
+  --tier-brand-size: 1.28rem;
+  --tier-nav-label-size: 0.78rem;
+  --chat-composer-helper-font-size: 0.64rem;
+  --chat-composer-helper-line-height: 1.25;
+  --chat-bubble-padding-inline: var(--space-inset-panel);
+  --chat-bubble-padding-block: var(--space-inset-default);
+  --chat-suggestion-frame-padding-inline: var(--space-10);
+  --chat-suggestion-frame-padding-block: var(--space-inset-panel);
+  --chat-suggestion-frame-inner-padding: var(--space-inset-default);
+  --chat-body-font-size: 0.98rem;
+  --chat-followup-frame-padding-inline: var(--space-inset-panel);
+  --chat-followup-frame-padding-block: var(--space-inset-default);
+  --chat-composer-button-padding-inline: var(--space-inset-panel);
+  --chat-composer-button-padding-block: var(--space-3);
+  --chat-message-meta-gap: var(--space-3);
+  --chat-message-indent: var(--space-12);
+  --chat-composer-field-padding-inline: var(--space-3);
+  --chat-composer-field-padding-block: var(--space-4);
+  --chat-followup-chip-height: var(--space-12);
+  --chat-followup-chip-padding-inline: var(--space-6);
+  --chat-followup-chip-padding-block: var(--space-3);
+  --tier-body-size: 0.98rem;
+  --tier-display-size: clamp(2.35rem, 4vw, 4rem);
+}
+
+[data-color-blind="deuteranopia"],
+[data-color-blind="protanopia"] {
+  --status-success: oklch(0.62 0.25 250);
+  --status-error: oklch(0.62 0.25 65);
+}
+
+[data-color-blind="tritanopia"] {
+  --status-success: oklch(0.68 0.22 25);
+  --status-error: oklch(0.58 0.22 355);
+}
+
+@media (max-width: 640px) {
+  :root {
+    --space-section-tight: var(--space-4);
+    --space-section-default: var(--space-6);
+    --container-padding: var(--space-frame-compact);
+    --chat-suggestion-stack-clearance: var(--space-section-tight);
+    --chat-followup-frame-padding-inline: var(--space-2);
+    --chat-followup-frame-padding-block: var(--space-2);
+    --chat-followup-chip-height: calc(var(--space-6) + var(--space-2));
+    --chat-followup-chip-padding-inline: var(--space-2);
+    --chat-followup-chip-padding-block: var(--space-1);
+    --fab-offset-inline: max(0.875rem, var(--safe-area-inset-right));
+    --fab-offset-inline-start: max(0.875rem, var(--safe-area-inset-left));
+    --fab-offset-block: max(0.875rem, calc(var(--safe-area-inset-bottom) + var(--space-1)));
+    --fab-launcher-size: 3.75rem;
+    --fab-launcher-icon-shell-size: 2.125rem;
+    --fab-default-shell-inline-size: min(32rem, calc(100vw - var(--fab-offset-inline-start) - var(--fab-offset-inline)));
+    --fab-default-shell-block-size: min(42rem, calc(var(--viewport-block-size) - max(0.875rem, var(--safe-area-inset-top)) - var(--fab-offset-block) - 0.875rem));
+    --fab-default-shell-radius: 1.4rem;
+    --shell-floating-chat-clearance-block: calc(var(--fab-launcher-size) + var(--fab-offset-block) + var(--space-4));
+  }
+}
+
+.dark {
+  --glass-sublayer: oklch(0.20 0.02 295);
+  --background: oklch(0.13 0.025 295);
+  --foreground: oklch(0.985 0.012 85);
+  --surface: oklch(0.18 0.022 295);
+  --surface-hover: oklch(0.24 0.028 295);
+  --surface-muted: oklch(0.16 0.020 295);
+  --border: oklch(0.32 0.028 295);
+  --text: oklch(0.985 0.012 85);
+  --accent: oklch(0.78 0.20 295);
+  --accent-interactive: oklch(0.78 0.20 295);
+  --accent-foreground: oklch(0.13 0.025 295);
+  --accent-secondary: oklch(0.82 0.16 75);
+  --accent-secondary-foreground: oklch(0.13 0.025 295);
+  --ink: oklch(0.985 0.012 85);
+  --ink-foreground: oklch(0.13 0.025 295);
+  --shadow-base: oklch(0 0 0);
+  --highlight-base: var(--foreground);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-interactive: var(--accent-interactive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-accent-secondary-foreground: var(--accent-secondary-foreground);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-text: var(--text);
+  --color-status-success: var(--status-success);
+  --color-status-error: var(--status-error);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+/* =========================================================
+   Theme Overrides — applied to <html> element
+   ========================================================= */
+
+.theme-bauhaus {
+  --border-radius: 10px;
+  --border-width: 1px;
+  --border-color: oklch(0.22 0 0 / 0.18);
+  --accent: oklch(0.48 0.20 15);
+  --accent-interactive: var(--accent);
+  --accent-color: var(--accent);
+  --accent-foreground: oklch(1 0 0);
+  --shadow-sm: 0 8px 24px -18px oklch(0.18 0 0 / 0.28);
+  --shadow-base: oklch(0.15 0.01 80);
+  --background: oklch(0.98 0.01 80);
+  --foreground: oklch(0.15 0 0);
+  --surface: oklch(0.995 0.004 80);
+  --surface-hover: oklch(0.972 0.006 80);
+  --surface-muted: oklch(0.955 0.018 80);
+  --border: var(--border-color);
+  --text: var(--foreground);
+}
+
+.theme-bauhaus.dark {
+  --background: oklch(0.12 0.012 70);
+  --foreground: oklch(0.98 0.01 80);
+  --surface: oklch(0.17 0.010 70);
+  --surface-hover: oklch(0.25 0 0);
+  --surface-muted: oklch(0.3 0 0);
+  --border-color: oklch(0.82 0.01 80 / 0.14);
+  --border: var(--border-color);
+  --text: var(--foreground);
+  --accent-color: oklch(0.60 0.20 15);
+  --accent: var(--accent-color);
+  --accent-interactive: var(--accent);
+}
+
+.theme-swiss {
+  --border-radius: 2px;
+  --border-width: 1px;
+  --border-color: oklch(0.9 0 0);
+  --accent: oklch(0 0 0);
+  --accent-interactive: oklch(0.50 0.20 22);
+  --accent-color: var(--accent);
+  --accent-foreground: oklch(1 0 0);
+  --shadow-sm: none;
+  --shadow-base: transparent;
+  --highlight-base: oklch(0.85 0 0);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.06 0 0);
+  --surface: oklch(0.992 0 0);
+  --surface-hover: oklch(0.975 0 0);
+  --surface-muted: oklch(0.955 0 0);
+  --border: var(--border-color);
+  --text: var(--foreground);
+}
+
+.theme-swiss.dark {
+  --background: oklch(0.03 0 0);
+  --foreground: oklch(0.95 0 0);
+  --surface: oklch(0.1 0 0);
+  --surface-hover: oklch(0.15 0 0);
+  --surface-muted: oklch(0.2 0 0);
+  --border-color: oklch(0.25 0 0);
+  --border: var(--border-color);
+  --accent-color: oklch(1 0 0);
+  --accent: var(--accent-color);
+  --accent-interactive: oklch(0.65 0.20 22);
+  --accent-foreground: oklch(0 0 0);
+  --text: var(--foreground);
+  --shadow-base: transparent;
+  --highlight-base: transparent;
+  --wordmark-luminance: oklch(0.95 0 0);
+}
+
+.theme-skeuomorphic {
+  --border-radius: 12px;
+  --border-width: 1px;
+  --border-color: oklch(0.75 0.05 240);
+  --accent: oklch(0.58 0.18 240);
+  --accent-interactive: var(--accent);
+  --accent-color: var(--accent);
+  --accent-foreground: oklch(1 0 0);
+  --shadow-sm: inset 0 1px 0 color-mix(in srgb, var(--highlight-base) 60%, transparent), 0 2px 4px color-mix(in srgb, var(--shadow-base) 40%, transparent);
+  --shadow-base: oklch(0.15 0.02 240);
+  --background: oklch(0.92 0.015 240);
+  --foreground: oklch(0.25 0.05 240);
+  --surface: oklch(0.96 0.01 240);
+  --surface-hover: oklch(0.97 0.01 240);
+  --surface-muted: oklch(0.86 0.02 240);
+  --border: var(--border-color);
+  --text: var(--foreground);
+}
+
+.theme-skeuomorphic.dark {
+  --background: oklch(0.16 0.04 215);
+  --foreground: oklch(0.88 0.02 240);
+  --surface: oklch(0.22 0.04 215);
+  --surface-hover: oklch(0.3 0.08 250);
+  --surface-muted: oklch(0.14 0.06 250);
+  --border-color: oklch(0.35 0.06 250);
+  --border: var(--border-color);
+  --text: var(--foreground);
+  --accent-color: oklch(0.65 0.15 240);
+  --accent: var(--accent-color);
+  --accent-interactive: var(--accent);
+  --accent-foreground: oklch(1 0 0);
+}
+
+.theme-fluid {
+  --border-radius: 0.9rem;
+  --border-width: 2px;
+  --border-color: oklch(0.24 0.035 55 / 0.42);
+  --accent: oklch(0.63 0.18 31);
+  --accent-interactive: oklch(0.60 0.19 31);
+  --accent-color: var(--accent);
+  --accent-foreground: oklch(0.985 0.025 82);
+  --accent-secondary: oklch(0.78 0.17 82);
+  --accent-secondary-foreground: oklch(0.20 0.05 51);
+  --ink: oklch(0.22 0.045 245);
+  --ink-foreground: oklch(0.985 0.025 82);
+  --shadow-sm: 7px 7px 0 oklch(0.22 0.045 245 / 0.16);
+  --shadow-base: oklch(0.22 0.045 245);
+  --background: oklch(0.975 0.032 88);
+  --foreground: oklch(0.20 0.05 51);
+  --surface: oklch(0.995 0.018 88);
+  --surface-hover: oklch(0.94 0.050 88);
+  --surface-muted: oklch(0.91 0.060 82);
+  --border: var(--border-color);
+  --text: var(--foreground);
+  --glass-sublayer: oklch(0.985 0.026 88);
+  --page-shell-accent-position: 12% -10%;
+  --page-shell-accent-strength: 24%;
+  --page-shell-accent-falloff: 42%;
+  --page-shell-foreground-position: 90% 10%;
+  --page-shell-foreground-strength: 10%;
+  --page-shell-foreground-falloff: 34%;
+}
+
+.theme-fluid.dark {
+  --background: oklch(0.18 0.045 245);
+  --foreground: oklch(0.96 0.035 88);
+  --surface: oklch(0.24 0.050 245);
+  --surface-hover: oklch(0.30 0.060 245);
+  --surface-muted: oklch(0.27 0.055 245);
+  --border-color: oklch(0.86 0.10 82 / 0.42);
+  --border: var(--border-color);
+  --shadow-sm: 7px 7px 0 oklch(0 0 0 / 0.24);
+  --shadow-base: oklch(0 0 0);
+  --accent-color: oklch(0.68 0.18 31);
+  --accent: var(--accent-color);
+  --accent-interactive: oklch(0.68 0.18 31);
+  --accent-foreground: oklch(0.18 0.045 245);
+  --accent-secondary: oklch(0.84 0.16 82);
+  --accent-secondary-foreground: oklch(0.18 0.045 245);
+  --ink: oklch(0.96 0.035 88);
+  --ink-foreground: oklch(0.18 0.045 245);
+  --text: var(--foreground);
+  --glass-sublayer: oklch(0.24 0.050 245);
+}
+
+/* =========================================================
+   Four expressive app themes
+   ========================================================= */
+
+.theme-mid-century {
+  --border-radius: 0.9rem;
+  --border-width: 2px;
+  --border-color: oklch(0.24 0.035 55 / 0.42);
+  --accent: oklch(0.63 0.18 31);
+  --accent-interactive: oklch(0.60 0.19 31);
+  --accent-color: var(--accent);
+  --accent-foreground: oklch(0.985 0.025 82);
+  --accent-secondary: oklch(0.78 0.17 82);
+  --accent-secondary-foreground: oklch(0.20 0.05 51);
+  --ink: oklch(0.22 0.045 245);
+  --ink-foreground: oklch(0.985 0.025 82);
+  --shadow-sm: 7px 7px 0 oklch(0.22 0.045 245 / 0.16);
+  --shadow-base: oklch(0.22 0.045 245);
+  --background: oklch(0.975 0.032 88);
+  --foreground: oklch(0.20 0.05 51);
+  --surface: oklch(0.995 0.018 88);
+  --surface-hover: oklch(0.94 0.050 88);
+  --surface-muted: oklch(0.91 0.060 82);
+  --border: var(--border-color);
+  --text: var(--foreground);
+  --glass-sublayer: oklch(0.985 0.026 88);
+  --font-display: var(--font-fraunces, serif);
+  --page-shell-accent-position: 12% -10%;
+  --page-shell-accent-strength: 24%;
+  --page-shell-accent-falloff: 42%;
+  --page-shell-foreground-position: 90% 10%;
+  --page-shell-foreground-strength: 10%;
+  --page-shell-foreground-falloff: 34%;
+}
+
+.theme-swiss {
+  --border-radius: 0.08rem;
+  --border-width: 1px;
+  --border-color: oklch(0.08 0 0 / 0.86);
+  --accent: oklch(0.53 0.23 25);
+  --accent-interactive: oklch(0.53 0.23 25);
+  --accent-color: var(--accent);
+  --accent-foreground: oklch(1 0 0);
+  --accent-secondary: oklch(0.08 0 0);
+  --accent-secondary-foreground: oklch(1 0 0);
+  --ink: oklch(0.08 0 0);
+  --ink-foreground: oklch(1 0 0);
+  --shadow-sm: none;
+  --shadow-base: oklch(0.08 0 0);
+  --background: oklch(0.995 0 0);
+  --foreground: oklch(0.08 0 0);
+  --surface: oklch(1 0 0);
+  --surface-hover: oklch(0.94 0 0);
+  --surface-muted: oklch(0.90 0 0);
+  --border: var(--border-color);
+  --text: var(--foreground);
+  --glass-sublayer: oklch(1 0 0);
+  --font-display: var(--font-ibm-plex-sans, sans-serif);
+  --tier-display-tracking: -0.075em;
+  --page-shell-accent-position: 0% 0%;
+  --page-shell-accent-strength: 0%;
+  --page-shell-foreground-position: 100% 0%;
+  --page-shell-foreground-strength: 0%;
+}
+
+.theme-techno-brutalist {
+  --border-radius: 0;
+  --border-width: 3px;
+  --border-color: oklch(0.95 0.02 120 / 0.84);
+  --accent: oklch(0.74 0.25 145);
+  --accent-interactive: oklch(0.76 0.26 145);
+  --accent-color: var(--accent);
+  --accent-foreground: oklch(0.08 0.04 260);
+  --accent-secondary: oklch(0.76 0.22 320);
+  --accent-secondary-foreground: oklch(0.08 0.04 260);
+  --ink: oklch(0.08 0.04 260);
+  --ink-foreground: oklch(0.94 0.04 145);
+  --shadow-sm: 9px 9px 0 oklch(0.76 0.22 320 / 0.34);
+  --shadow-base: oklch(0 0 0);
+  --background: oklch(0.10 0.04 260);
+  --foreground: oklch(0.94 0.04 145);
+  --surface: oklch(0.16 0.05 260);
+  --surface-hover: oklch(0.23 0.07 260);
+  --surface-muted: oklch(0.20 0.06 260);
+  --border: var(--border-color);
+  --text: var(--foreground);
+  --glass-sublayer: oklch(0.14 0.05 260);
+  --font-display: var(--font-ibm-plex-mono, monospace);
+  --font-body: var(--font-ibm-plex-mono, monospace);
+  --tier-display-tracking: -0.08em;
+  --page-shell-accent-position: 24% 8%;
+  --page-shell-accent-strength: 28%;
+  --page-shell-accent-falloff: 36%;
+  --page-shell-foreground-position: 88% 18%;
+  --page-shell-foreground-strength: 14%;
+}
+
+.theme-editorial {
+  --border-radius: 0.85rem;
+  --border-width: 1px;
+  --border-color: oklch(0.22 0.015 90 / 0.34);
+  --accent: oklch(0.34 0.035 170);
+  --accent-interactive: oklch(0.30 0.045 170);
+  --accent-color: var(--accent);
+  --accent-foreground: oklch(0.985 0.018 84);
+  --accent-secondary: oklch(0.86 0.040 78);
+  --accent-secondary-foreground: oklch(0.16 0.012 85);
+  --ink: oklch(0.16 0.012 85);
+  --ink-foreground: oklch(0.985 0.018 84);
+  --shadow-sm: 0 24px 70px -54px oklch(0.16 0.012 85 / 0.30);
+  --shadow-base: oklch(0.16 0.012 85);
+  --background: oklch(0.965 0.020 83);
+  --foreground: oklch(0.16 0.012 85);
+  --surface: oklch(0.985 0.012 83 / 0.92);
+  --surface-hover: oklch(0.94 0.018 83);
+  --surface-muted: oklch(0.90 0.020 83);
+  --border: var(--border-color);
+  --text: var(--foreground);
+  --glass-sublayer: oklch(0.985 0.012 83 / 0.80);
+  --font-display: var(--font-cormorant-garamond, serif);
+  --font-body: var(--font-ibm-plex-sans, sans-serif);
+  --tier-display-size: clamp(3.4rem, 6vw, 5.8rem);
+  --tier-display-line-height: 0.88;
+  --tier-display-tracking: -0.05em;
+  --hero-title-max-width: 16ch;
+  --hero-body-font-size: 1.18rem;
+  --hero-body-line-height: 1.35;
+  --page-shell-accent-position: 0% 0%;
+  --page-shell-accent-strength: 10%;
+  --page-shell-accent-falloff: 38%;
+  --page-shell-foreground-position: 100% 0%;
+  --page-shell-foreground-strength: 8%;
+  --page-shell-foreground-falloff: 34%;
+}
+
+/* =========================================================
+   Global Base Styles — consume the variables
+   ========================================================= */
+
+html,
+body {
+  block-size: 100%;
+  inline-size: 100%;
+  min-block-size: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-inline: hidden;
+  overflow-block: auto;
+}
+
+html {
+  font-size: var(--font-size-base, 1rem);
+  transition-property: --background, --foreground, --surface, --surface-muted, --accent, --accent-interactive, --border, --text;
+  transition-duration: 350ms;
+  transition-timing-function: ease-in-out;
+}
+
+body {
+  font-family: var(--font-base, sans-serif);
+  line-height: var(--line-height-base);
+  letter-spacing: var(--letter-spacing-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition:
+    background-color 350ms ease-in-out,
+    color 350ms ease-in-out,
+    border-color 350ms ease-in-out,
+    box-shadow 350ms ease-in-out;
+}
