@@ -59,7 +59,7 @@ defmodule ChatApp.MixProject do
       {:gettext, "~> 1.0"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:ex_doc, "~> 0.31", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.31", only: [:dev, :test], runtime: false},
       {:floki, ">= 0.30.0", only: :test},
       {:bypass, github: "PSPDFKit-labs/bypass", only: :test},
       {:wallaby, "~> 0.30", runtime: false, only: :test}

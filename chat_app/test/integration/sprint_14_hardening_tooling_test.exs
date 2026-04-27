@@ -30,7 +30,7 @@ defmodule ChatAppWeb.Sprint14HardeningToolingIntegrationTest do
     {output, status} =
       System.cmd("mix", ["docs"],
         stderr_to_stdout: true,
-        env: [{"MIX_ENV", "dev"}]
+        env: [{"MIX_ENV", "test"}]
       )
 
     warning_lines =
