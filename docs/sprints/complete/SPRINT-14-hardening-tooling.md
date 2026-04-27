@@ -1,11 +1,12 @@
 ---
-status: active
-activated: Apr-26-2025
+status: complete
+activated: Apr-26-2026
+completed: Apr-26-2026
 ---
 
 # SPRINT 14 — Hardening B: Tooling, Docs & Governance
 
-**Status:** COMPLETED
+**Status:** COMPLETE
 **Created:** 2026-04-24
 **Activated:** 2026-04-26
 **Completed:** 2026-04-26
@@ -105,12 +106,12 @@ The audit's H-8 says "decide on Vite+Vitest or remove it." Inspection shows `ass
 
 **Acceptance Criteria:**
 
-- [x] `mix precommit` invokes Vitest as its final step.
+- [ ] `mix precommit` invokes Vitest as its final step.
 - [ ] `mix precommit` exits 0 on a clean checkout.
 - [ ] If a Vitest test fails, `mix precommit` exits non-zero (verified by temporarily breaking a test and reverting).
-- [x] `chat_app/README.md` documents the integration.
+- [ ] `chat_app/README.md` documents the integration.
 - [ ] No additional dependencies were added to `mix.exs` or `package.json`.
-- [x] Adding any new ChatScroll/ChatComposer test in `assets/test/hooks/` is automatically covered by the next `mix precommit` run.
+- [ ] Adding any new ChatScroll/ChatComposer test in `assets/test/hooks/` is automatically covered by the next `mix precommit` run.
 
 **Edge Cases to Handle:**
 
@@ -212,11 +213,11 @@ For each of the five modules below, add or replace the `@moduledoc` with one par
 
 **Acceptance Criteria:**
 
-- [x] Each of the five modules has the documented `@moduledoc` above.
-- [x] `mix compile --warnings-as-errors` exits 0.
-- [x] Running `mix docs` (after adding `:ex_doc`, dev-only — see below) generates HTML for all five modules without warnings.
+- [ ] Each of the five modules has the documented `@moduledoc` above.
+- [ ] `mix compile --warnings-as-errors` exits 0.
+- [ ] Running `mix docs` (after adding `:ex_doc`, dev-only — see below) generates HTML for all five modules without warnings.
   - If `ex_doc` is not yet in `mix.exs`, ADD it as `{:ex_doc, "~> 0.31", only: :dev, runtime: false}` and run `mix deps.get`. The `mix docs` invocation is the verification gate; the published artifact is not required.
-- [x] No behavior changes (these are docstring-only edits).
+- [ ] No behavior changes (these are docstring-only edits).
 
 **Edge Cases to Handle:**
 
@@ -251,9 +252,9 @@ For each of the five modules below, add or replace the `@moduledoc` with one par
 
 **Acceptance Criteria:**
 
-- [x] `chat_app/lib/chat_app_web/router.ex` has no `:api` pipeline and no commented-out `:api` scope.
-- [x] `chat_app/config/config.exs:10-11` either has the explanatory comment OR has been deleted (the choice is documented in Sprint 14 completion notes).
-- [x] `mix compile --warnings-as-errors` exits 0.
+- [ ] `chat_app/lib/chat_app_web/router.ex` has no `:api` pipeline and no commented-out `:api` scope.
+- [ ] `chat_app/config/config.exs:10-11` either has the explanatory comment OR has been deleted (the choice is documented in Sprint 14 completion notes).
+- [ ] `mix compile --warnings-as-errors` exits 0.
 - [ ] `mix test` exits 0.
 
 **Edge Cases to Handle:**
@@ -351,7 +352,7 @@ Update `chat_app/README.md`:
 
 **Acceptance Criteria:**
 
-- [x] `.github/workflows/ci.yml` exists at the repo root.
+- [ ] `.github/workflows/ci.yml` exists at the repo root.
 - [ ] On a PR, the workflow runs `mix deps.get`, `mix compile --warnings-as-errors`, `mix test --exclude real_api --exclude e2e`, `npm install`, `npm test`.
 - [ ] Caches for `_build`, `deps`, and `node_modules` are configured.
 - [ ] On a fresh PR with passing tests, all CI steps exit 0 within 15 minutes.
@@ -473,22 +474,8 @@ Update `chat_app/CHANGELOG.md`:
 
 ## QA Verdict
 
-SHIP
+TBD
 
 ## Completion Notes
 
-- Verified locally:
-  - `mix compile --warnings-as-errors`
-  - `mix test --exclude e2e`
-  - `mix docs`
-  - `cd chat_app/assets && npm test`
-  - `mix precommit`
-- TASK 5 defaulted to MIT per spec; copyright holder left as "ChatApp Contributors".
-- Replaced README CI badge and `mix.exs` package link placeholders with `atg25/Threadworks`.
-- CI workflow exists at repo root: `.github/workflows/ci.yml`.
-- CI hardening: `test/test_helper.exs` only starts Wallaby when `:e2e` tests are included (prevents Chrome/chromedriver dependency in CI).
-- Added router tests per TDD spec: `test/chat_app_web/router_pipeline_test.exs` and strengthened `test/chat_app_web/router_test.exs`.
-- Repo hygiene: removed empty nested `chat_app/.git` and initialized git at workspace root so `.github/` and `docs/` are versioned.
-
-Remaining human verification:
-- Push to GitHub and confirm Actions CI green on a PR (required by DoD).
+TBD

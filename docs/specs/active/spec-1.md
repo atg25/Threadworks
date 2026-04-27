@@ -56,7 +56,7 @@ SPRINT-11 closed the highest-priority audit items in the “immediate fixes A”
 - **IF-4 / §17 C-4:** Global `config :chat_app, :openai_model, "gpt-4o"` and `ChatApp.OpenAI` reads it for the request body (per-conversation overrides remain SPRINT-15/16).
 - **IF-7 / §17 D-2:** Composer uses a paired `<textarea><%= @input %></textarea>` (valid HTML).
 
-**Remaining Phase 2 in this track (after SPRINT-12):** SPRINT-13 (active, `docs/sprints/active/`) and SPRINT-14–16 (planned, `docs/sprints/planned/`). See `docs/sprints/README.md`.
+**Remaining Phase 2:** SPRINT-15–16 (planned, `docs/sprints/planned/`). SPRINT-13 and SPRINT-14 have been completed. See `docs/sprints/README.md`.
 
 ### 0.5 Phase 2 — SPRINT-12 completion (2026-04-25)
 
@@ -67,7 +67,7 @@ SPRINT-12 closed the “immediate fixes B: resilience & cleanup” items:
 - **IF-5 (rate limit):** Hammer `~> 6.2` with per-session keying and user-visible “slow down” behavior.
 - **IF-9 (scaffold):** `PageController` / `PageHTML` scaffold and unused `CoreComponents` / `theme_toggle` removed per task scope; `/page` is unmapped (404).
 
-**Phase 2 is not complete:** SPRINT-13 is in flight; SPRINT-14–16 are planned — see `docs/sprints/README.md`.
+**Phase 2 is not complete:** 4 of 6 sprints done (SPRINT-11, 12, 13, 14 complete); SPRINT-15–16 are planned — see `docs/sprints/README.md`.
 
 ---
 
@@ -1031,7 +1031,7 @@ Items that are NOT yet drift but **will become drift** as soon as the listed Pha
 
 **No.** Spec-1 has been completely delivered (every section, every checklist item, every acceptance criterion). It is **not** the right target for the next sprint, for three independent reasons:
 
-1. **It's a finished phase (Phase 1).** Sprints 1.1 → 1.10 closed the loop. There is no in-flight work left in spec-1's Phase-1 surface area. **SPRINT-11 and SPRINT-12 (Phase 2 immediate-fixes tracks) are complete** — see §0.4–§0.5. **Phase 2 overall is not finished** — **SPRINT-13** is in flight ([`../../sprints/active/SPRINT-13-hardening-architecture.md`](../../sprints/active/SPRINT-13-hardening-architecture.md)); **SPRINT-14–16** are planned ([`../../sprints/planned/`](../../sprints/planned/)).
+1. **It's a finished phase (Phase 1).** Sprints 1.1 → 1.10 closed the loop. There is no in-flight work left in spec-1's Phase-1 surface area. **SPRINT-11, SPRINT-12, SPRINT-13, and SPRINT-14 (Phase 2 hardening tracks) are complete** — see §0.4–§0.5 and [`../../sprints/complete/`](../../sprints/complete/). **Phase 2 overall is not finished** — **SPRINT-15–16** are planned ([`../../sprints/planned/`](../../sprints/planned/)).
 2. **It prescribes patterns the implementation has superseded in code.** C-2, C-4 (SPRINT-11) and C-1, C-3 (SPRINT-12) are fixed in production; the **spec text in §8/§15/§17 still shows the old prescription** as a historical record — do not reintroduce those patterns.
 3. **It does not describe the system that exists.** The implementation already includes test-harness infrastructure (E-2, E-5, E-6), HTML-correctness fixes (D-2), Tailwind v4 syntax (D-1), and module extractions (E-3) that have no analog in the spec. A reader cannot use spec-1 to predict the shape of `lib/chat_app/`.
 
