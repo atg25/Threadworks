@@ -386,7 +386,9 @@ defmodule ChatApp.OpenAIIntegrationTest do
 
     Task.start(fn -> OpenAI.stream([%{role: :user, content: "Q"}], pid) end)
 
-    assert_receive {:stream_error, _}, 2000
+    assert_receive {:stream_retrying, 0}, 2000
+    assert_receive {:stream_retrying, 1}, 3000
+    assert_receive {:stream_error, _}, 5000
 
     :gen_tcp.close(listen_sock)
   end

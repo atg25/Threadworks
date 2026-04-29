@@ -1,8 +1,25 @@
 @layer utilities {
+  .ui-chat-sidebar {
+    transition: width 180ms ease;
+  }
+
+  @media (max-width: 767px) {
+    .ui-chat-sidebar[data-sidebar-collapsed="true"] {
+      display: none;
+    }
+
+    .ui-chat-sidebar[data-sidebar-collapsed="false"] {
+      display: flex;
+    }
+  }
+
   .ui-chat-header-surface {
     border-color: color-mix(in oklab, var(--foreground) 24%, transparent);
-    background:
-      linear-gradient(90deg, color-mix(in oklab, var(--accent-secondary) 14%, var(--surface)) 0 18%, var(--surface) 18% 100%);
+    background: linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--accent-secondary) 14%, var(--surface)) 0 18%,
+      var(--surface) 18% 100%
+    );
     box-shadow: none;
     min-height: 4.25rem;
     position: relative;
@@ -14,12 +31,19 @@
     inset-inline: 0;
     inset-block-end: 0;
     block-size: 2px;
-    background: linear-gradient(90deg, var(--accent-interactive), var(--accent-secondary), oklch(0.58 0.13 190));
+    background: linear-gradient(
+      90deg,
+      var(--accent-interactive),
+      var(--accent-secondary),
+      oklch(0.58 0.13 190)
+    );
     opacity: 1;
     pointer-events: none;
   }
 
-  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  @supports (
+    (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+  ) {
     .ui-chat-header-surface {
       background-color: color-mix(in oklab, var(--surface) 92%, transparent);
       backdrop-filter: blur(12px) saturate(125%);
@@ -28,20 +52,31 @@
   }
 
   .ui-chat-search-field {
-    background: color-mix(in oklab, var(--surface-muted) 92%, var(--background));
+    background: color-mix(
+      in oklab,
+      var(--surface-muted) 92%,
+      var(--background)
+    );
     color: color-mix(in oklab, var(--foreground) 76%, transparent);
-    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 7%, transparent);
+    box-shadow: inset 0 0 0 1px
+      color-mix(in oklab, var(--foreground) 7%, transparent);
   }
 
   .ui-chat-density-toggle {
-    background: color-mix(in oklab, var(--surface-muted) 92%, var(--background));
-    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 6%, transparent);
+    background: color-mix(
+      in oklab,
+      var(--surface-muted) 92%,
+      var(--background)
+    );
+    box-shadow: inset 0 0 0 1px
+      color-mix(in oklab, var(--foreground) 6%, transparent);
   }
 
   .ui-chat-density-option-active {
     background-color: var(--accent-interactive);
     color: var(--accent-foreground);
-    box-shadow: 0 8px 16px -14px color-mix(in srgb, var(--shadow-base) 18%, transparent);
+    box-shadow: 0 8px 16px -14px
+      color-mix(in srgb, var(--shadow-base) 18%, transparent);
   }
 
   .ui-chat-density-option-idle {
@@ -53,15 +88,56 @@
     background-color: var(--surface-hover);
   }
 
+  @media (max-width: 768px) {
+    [data-chat-surface-header="true"] {
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      align-items: center;
+      padding-inline: var(--space-3);
+      gap: var(--space-2);
+    }
+
+    [data-chat-surface-header="true"]
+      > .flex.min-w-0.items-center.gap-\[var\(--space-4\)\] {
+      flex: 1 1 100%;
+      min-width: 0;
+    }
+
+    [data-chat-surface-header="true"] [role="group"][aria-label="Theme"] {
+      display: none;
+    }
+
+    [data-chat-surface-header="true"] > button {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.75rem;
+    }
+  }
+
   .ui-chat-viewport-glow {
-    background: radial-gradient(circle at top, color-mix(in srgb, var(--highlight-base) 28%, transparent), transparent 72%);
+    background: radial-gradient(
+      circle at top,
+      color-mix(in srgb, var(--highlight-base) 28%, transparent),
+      transparent 72%
+    );
   }
 
   .ui-chat-transcript-plane {
     background:
-      radial-gradient(circle at 18% 18%, color-mix(in oklab, var(--accent-secondary) 28%, transparent) 0 9rem, transparent 9.25rem),
-      radial-gradient(circle at 84% 22%, color-mix(in oklab, oklch(0.58 0.13 190) 18%, transparent) 0 7rem, transparent 7.25rem),
-      linear-gradient(180deg, var(--background), color-mix(in oklab, var(--background) 92%, var(--surface-muted)));
+      radial-gradient(
+        circle at 18% 18%,
+        color-mix(in oklab, var(--accent-secondary) 28%, transparent) 0 9rem,
+        transparent 9.25rem
+      ),
+      radial-gradient(
+        circle at 84% 22%,
+        color-mix(in oklab, oklch(0.58 0.13 190) 18%, transparent) 0 7rem,
+        transparent 7.25rem
+      ),
+      linear-gradient(
+        180deg,
+        var(--background),
+        color-mix(in oklab, var(--background) 92%, var(--surface-muted))
+      );
   }
 
   .ui-chat-transcript-frame {
@@ -77,10 +153,16 @@
   }
 
   .ui-chat-scroll-cta {
-    border: 1px solid color-mix(in oklab, var(--accent-interactive) 22%, transparent);
-    background: color-mix(in oklab, var(--accent-interactive) 92%, var(--foreground));
+    border: 1px solid
+      color-mix(in oklab, var(--accent-interactive) 22%, transparent);
+    background: color-mix(
+      in oklab,
+      var(--accent-interactive) 92%,
+      var(--foreground)
+    );
     color: var(--accent-foreground);
-    box-shadow: 0 20px 34px -22px color-mix(in srgb, var(--shadow-base) 42%, transparent);
+    box-shadow: 0 20px 34px -22px
+      color-mix(in srgb, var(--shadow-base) 42%, transparent);
   }
 
   .ui-chat-scroll-cta-dock {
@@ -90,7 +172,8 @@
   .ui-chat-brand-chip-cluster {
     border: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
     background: color-mix(in oklab, var(--glass-sublayer) 66%, transparent);
-    box-shadow: 0 10px 30px -26px color-mix(in srgb, var(--shadow-base) 12%, transparent);
+    box-shadow: 0 10px 30px -26px
+      color-mix(in srgb, var(--shadow-base) 12%, transparent);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
@@ -112,9 +195,14 @@
     color: color-mix(in oklab, var(--foreground) 96%, transparent);
     border-start-start-radius: 0.5rem;
     border: 2px solid color-mix(in oklab, var(--foreground) 24%, transparent);
-    border-inline-start: 0.65rem solid color-mix(in oklab, var(--accent-secondary) 90%, var(--accent-interactive));
-    box-shadow:
-      5px 5px 0 color-mix(in oklab, var(--shadow-base) 14%, transparent);
+    border-inline-start: 0.65rem solid
+      color-mix(
+        in oklab,
+        var(--accent-secondary) 90%,
+        var(--accent-interactive)
+      );
+    box-shadow: 5px 5px 0
+      color-mix(in oklab, var(--shadow-base) 14%, transparent);
     max-width: min(80%, var(--chat-bubble-max-measure));
     overflow-wrap: anywhere;
   }
@@ -129,16 +217,23 @@
   }
 
   .ui-chat-inline-rail {
-    background: linear-gradient(to bottom, transparent, color-mix(in oklab, var(--foreground) 15%, transparent), transparent);
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      color-mix(in oklab, var(--foreground) 15%, transparent),
+      transparent
+    );
   }
 
   .ui-chat-attachment-card {
-    border: 1px solid color-mix(in oklab, var(--accent-interactive) 12%, transparent);
+    border: 1px solid
+      color-mix(in oklab, var(--accent-interactive) 12%, transparent);
     background: color-mix(in oklab, var(--background) 70%, transparent);
   }
 
   .ui-chat-action-chip {
-    border: 1px solid color-mix(in oklab, var(--accent-interactive) 20%, transparent);
+    border: 1px solid
+      color-mix(in oklab, var(--accent-interactive) 20%, transparent);
     background: color-mix(in oklab, var(--accent-interactive) 8%, transparent);
     color: var(--accent-interactive);
   }
@@ -146,7 +241,8 @@
   .ui-chat-followup-frame {
     border: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
     background: color-mix(in oklab, var(--surface) 94%, var(--background));
-    box-shadow: 0 14px 28px -24px color-mix(in srgb, var(--shadow-base) 26%, transparent);
+    box-shadow: 0 14px 28px -24px
+      color-mix(in srgb, var(--shadow-base) 26%, transparent);
     padding-inline: var(--chat-followup-frame-padding-inline);
     padding-block: var(--chat-followup-frame-padding-block);
   }
@@ -154,7 +250,8 @@
   .ui-chat-hero-suggestion-frame {
     border: 1px solid color-mix(in oklab, var(--foreground) 6%, transparent);
     background: color-mix(in oklab, var(--glass-sublayer) 56%, transparent);
-    box-shadow: 0 18px 50px -38px color-mix(in srgb, var(--shadow-base) 26%, transparent);
+    box-shadow: 0 18px 50px -38px
+      color-mix(in srgb, var(--shadow-base) 26%, transparent);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     padding-inline: var(--hero-suggestion-frame-padding-inline);
@@ -165,27 +262,31 @@
     border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
     background: var(--background);
     color: color-mix(in oklab, var(--foreground) 78%, transparent);
-    box-shadow: 0 10px 18px -18px color-mix(in srgb, var(--shadow-base) 22%, transparent);
+    box-shadow: 0 10px 18px -18px
+      color-mix(in srgb, var(--shadow-base) 22%, transparent);
   }
 
   .ui-chat-hero-chip {
     border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
     background: color-mix(in oklab, var(--background) 82%, transparent);
     color: color-mix(in oklab, var(--foreground) 82%, transparent);
-    box-shadow: 0 10px 24px -22px color-mix(in srgb, var(--shadow-base) 20%, transparent);
+    box-shadow: 0 10px 24px -22px
+      color-mix(in srgb, var(--shadow-base) 20%, transparent);
   }
 
   .ui-chat-file-pill {
     border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
     background: color-mix(in oklab, var(--background) 82%, transparent);
     color: color-mix(in oklab, var(--foreground) 72%, transparent);
-    box-shadow: 0 8px 16px -18px color-mix(in srgb, var(--shadow-base) 18%, transparent);
+    box-shadow: 0 8px 16px -18px
+      color-mix(in srgb, var(--shadow-base) 18%, transparent);
   }
 
   .ui-chat-composer-frame {
     border: 2px solid color-mix(in oklab, var(--foreground) 18%, transparent);
     background: var(--surface);
-    box-shadow: 8px 8px 0 color-mix(in oklab, var(--shadow-base) 12%, transparent);
+    box-shadow: 8px 8px 0
+      color-mix(in oklab, var(--shadow-base) 12%, transparent);
     padding: var(--input-padding);
     min-width: 0;
   }
@@ -203,7 +304,8 @@
     border-color: var(--accent-interactive);
     box-shadow:
       0 0 0 4px color-mix(in oklab, var(--accent-interactive) 24%, transparent),
-      0 28px 60px -36px color-mix(in oklab, var(--accent-interactive) 38%, transparent);
+      0 28px 60px -36px
+        color-mix(in oklab, var(--accent-interactive) 38%, transparent);
   }
 
   .ui-chat-composer-frame:focus-within textarea {
@@ -219,10 +321,12 @@
     padding-top: var(--space-1);
     padding-inline: var(--space-3);
     padding-bottom: var(--space-2);
-    background: linear-gradient(180deg,
+    background: linear-gradient(
+      180deg,
       color-mix(in oklab, var(--background) 42%, transparent) 0%,
       color-mix(in oklab, var(--background) 96%, transparent) 40%,
-      var(--background) 100%);
+      var(--background) 100%
+    );
     box-shadow: 0 -2px 0 color-mix(in oklab, var(--foreground) 8%, transparent);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -251,10 +355,17 @@
       transform 180ms ease;
   }
 
-  .ui-chat-progress-strip-trigger:hover [data-capability-progress-bubble="true"],
-  .ui-chat-progress-strip-trigger[aria-expanded="true"] [data-capability-progress-bubble="true"] {
-    border-color: color-mix(in oklab, var(--accent-interactive) 24%, transparent);
-    box-shadow: 0 12px 22px -18px color-mix(in srgb, var(--shadow-base) 26%, transparent);
+  .ui-chat-progress-strip-trigger:hover
+    [data-capability-progress-bubble="true"],
+  .ui-chat-progress-strip-trigger[aria-expanded="true"]
+    [data-capability-progress-bubble="true"] {
+    border-color: color-mix(
+      in oklab,
+      var(--accent-interactive) 24%,
+      transparent
+    );
+    box-shadow: 0 12px 22px -18px
+      color-mix(in srgb, var(--shadow-base) 26%, transparent);
   }
 
   .ui-chat-progress-strip-overflow {
@@ -271,7 +382,8 @@
     border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
     border-radius: 1.15rem;
     background: color-mix(in oklab, var(--surface) 96%, var(--background));
-    box-shadow: 0 20px 42px -32px color-mix(in srgb, var(--shadow-base) 28%, transparent);
+    box-shadow: 0 20px 42px -32px
+      color-mix(in srgb, var(--shadow-base) 28%, transparent);
     padding: var(--space-3);
   }
 
@@ -335,7 +447,8 @@
     border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
     border-radius: 1rem;
     background: color-mix(in oklab, var(--surface) 96%, var(--background));
-    box-shadow: 0 20px 40px -30px color-mix(in srgb, var(--shadow-base) 24%, transparent);
+    box-shadow: 0 20px 40px -30px
+      color-mix(in srgb, var(--shadow-base) 24%, transparent);
     padding: var(--space-2);
   }
 
@@ -351,7 +464,11 @@
   }
 
   .ui-chat-conversation-menu-item:hover {
-    background: color-mix(in oklab, var(--surface-muted) 92%, var(--background));
+    background: color-mix(
+      in oklab,
+      var(--surface-muted) 92%,
+      var(--background)
+    );
   }
 
   .ui-chat-conversation-menu-item:disabled {
@@ -360,7 +477,12 @@
   }
 
   .ui-chat-composer-seam {
-    background: linear-gradient(to right, transparent, color-mix(in oklab, var(--foreground) 8%, transparent), transparent);
+    background: linear-gradient(
+      to right,
+      transparent,
+      color-mix(in oklab, var(--foreground) 8%, transparent),
+      transparent
+    );
   }
 
   .ui-chat-attach-button {
@@ -446,7 +568,9 @@
   .ui-chat-suggestion-band-entry {
     opacity: 1;
     transform: translateY(0);
-    transition: opacity 200ms ease-out, transform 200ms ease-out;
+    transition:
+      opacity 200ms ease-out,
+      transform 200ms ease-out;
   }
 
   @starting-style {
@@ -482,13 +606,23 @@
     }
 
     @keyframes fade-out {
-      from { opacity: 1; }
-      to { opacity: 0; }
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
     }
 
     @keyframes fade-in {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
   }
 
@@ -511,7 +645,10 @@
   }
 
   .ui-chat-message-stack[data-message-list-mode="embedded"][data-message-list-state="conversation"][data-chat-suggestion-tail="present"] {
-    padding-bottom: calc(var(--chat-fold-gutter) + var(--chat-composer-gap) + var(--space-stack-default));
+    padding-bottom: calc(
+      var(--chat-fold-gutter) + var(--chat-composer-gap) +
+        var(--space-stack-default)
+    );
   }
 
   .ui-chat-suggestion-band-promoted {
@@ -551,16 +688,23 @@
 
   .homepage-chat-atmosphere {
     background:
-      radial-gradient(ellipse 60% 40% at 12% -8%,
+      radial-gradient(
+        ellipse 60% 40% at 12% -8%,
         color-mix(in oklab, var(--accent-interactive) 22%, transparent) 0%,
-        transparent 60%),
-      radial-gradient(ellipse 60% 40% at 92% 6%,
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 60% 40% at 92% 6%,
         color-mix(in oklab, var(--accent-secondary) 22%, transparent) 0%,
-        transparent 58%),
-      linear-gradient(180deg,
+        transparent 58%
+      ),
+      linear-gradient(
+        180deg,
         color-mix(in oklab, var(--background) 92%, white) 0%,
         var(--background) 60%,
-        color-mix(in oklab, var(--background) 96%, var(--accent-interactive)) 100%);
+        color-mix(in oklab, var(--background) 96%, var(--accent-interactive))
+          100%
+      );
   }
 }
 
@@ -580,7 +724,9 @@
   border-style: dashed;
   border-color: var(--accent-interactive);
   background: color-mix(in oklab, var(--accent-interactive) 6%, var(--surface));
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
 }
 
 /* Send error flash */
@@ -590,8 +736,13 @@
 }
 
 @keyframes composer-error-flash {
-  0% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger, #b42318) 40%, transparent); }
-  100% { box-shadow: 0 0 0 0 transparent; }
+  0% {
+    box-shadow: 0 0 0 2px
+      color-mix(in srgb, var(--danger, #b42318) 40%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
 }
 
 [data-chat-shell-kind="floating"] {
@@ -603,7 +754,8 @@
   border-color: var(--fva-shell-border-strong);
   background: var(--fva-shell-header-surface);
   box-shadow:
-    inset 0 -1px 0 color-mix(in oklab, var(--fva-shell-border-strong) 88%, transparent),
+    inset 0 -1px 0
+      color-mix(in oklab, var(--fva-shell-border-strong) 88%, transparent),
     0 18px 40px -32px color-mix(in oklab, var(--shadow-base) 34%, transparent);
 }
 
@@ -622,18 +774,21 @@
   padding: var(--space-1);
 }
 
-[data-chat-shell-kind="floating"] [data-chat-conversation-reset-trigger="true"] {
+[data-chat-shell-kind="floating"]
+  [data-chat-conversation-reset-trigger="true"] {
   border: 1px solid var(--fva-shell-border-strong);
   background: var(--fva-shell-panel-surface);
   color: var(--fva-shell-action-primary);
 }
 
-[data-chat-shell-kind="floating"] [data-chat-conversation-reset-confirmation="true"],
+[data-chat-shell-kind="floating"]
+  [data-chat-conversation-reset-confirmation="true"],
 [data-chat-shell-kind="floating"] [data-chat-conversation-reset-copy="true"] {
   color: var(--fva-shell-text-muted);
 }
 
-[data-chat-shell-kind="floating"] [data-chat-conversation-reset-confirm-action="true"] {
+[data-chat-shell-kind="floating"]
+  [data-chat-conversation-reset-confirm-action="true"] {
   background: var(--fva-shell-send-ready);
   color: var(--accent-foreground);
 }
@@ -654,7 +809,9 @@
   color: var(--fva-shell-text-muted);
 }
 
-[data-chat-shell-kind="floating"] [data-chat-message-role="assistant"][data-chat-message-emphasis="anchor"] [data-chat-bubble-surface="true"] {
+[data-chat-shell-kind="floating"]
+  [data-chat-message-role="assistant"][data-chat-message-emphasis="anchor"]
+  [data-chat-bubble-surface="true"] {
   background: var(--fva-shell-assistant-anchor-surface);
   box-shadow:
     inset 0 0 0 1px var(--fva-shell-border-soft),
@@ -662,17 +819,23 @@
   color: var(--fva-shell-text-strong);
 }
 
-[data-chat-shell-kind="floating"] [data-chat-message-role="assistant"][data-chat-message-emphasis="supporting"] [data-chat-bubble-surface="true"] {
+[data-chat-shell-kind="floating"]
+  [data-chat-message-role="assistant"][data-chat-message-emphasis="supporting"]
+  [data-chat-bubble-surface="true"] {
   background: var(--fva-shell-bubble-surface);
   box-shadow:
-    inset 0 0 0 1px color-mix(in oklab, var(--fva-shell-border-soft) 78%, transparent),
+    inset 0 0 0 1px
+      color-mix(in oklab, var(--fva-shell-border-soft) 78%, transparent),
     0 12px 24px -24px color-mix(in oklab, var(--shadow-base) 20%, transparent);
 }
 
-[data-chat-shell-kind="floating"] [data-chat-message-role="user"] [data-chat-bubble-surface="true"] {
+[data-chat-shell-kind="floating"]
+  [data-chat-message-role="user"]
+  [data-chat-bubble-surface="true"] {
   background: var(--fva-shell-user-surface);
   box-shadow:
-    inset 0 0 0 1px color-mix(in oklab, var(--fva-shell-border-soft) 68%, transparent),
+    inset 0 0 0 1px
+      color-mix(in oklab, var(--fva-shell-border-soft) 68%, transparent),
     0 10px 22px -24px color-mix(in oklab, var(--shadow-base) 18%, transparent);
   color: color-mix(in oklab, var(--fva-shell-text-strong) 84%, transparent);
 }
@@ -706,7 +869,8 @@
   color: var(--accent-foreground);
   background: var(--fva-shell-action-primary);
   border-color: transparent;
-  box-shadow: 0 16px 24px -20px color-mix(in oklab, var(--shadow-base) 32%, transparent);
+  box-shadow: 0 16px 24px -20px
+    color-mix(in oklab, var(--shadow-base) 32%, transparent);
 }
 
 [data-chat-shell-kind="floating"] [data-chat-suggestion-rank="secondary"] {
@@ -716,25 +880,36 @@
 }
 
 [data-chat-shell-kind="floating"] [data-chat-suggestion-rank="neutral"] {
-  border-color: color-mix(in oklab, var(--fva-shell-border-soft) 82%, transparent);
+  border-color: color-mix(
+    in oklab,
+    var(--fva-shell-border-soft) 82%,
+    transparent
+  );
 }
 
 [data-chat-shell-kind="floating"] [data-chat-composer-plane="true"] {
   background: var(--fva-shell-composer-plane-surface);
   box-shadow:
-    inset 0 1px 0 color-mix(in oklab, var(--fva-shell-border-soft) 88%, transparent),
+    inset 0 1px 0
+      color-mix(in oklab, var(--fva-shell-border-soft) 88%, transparent),
     0 -12px 28px -30px color-mix(in oklab, var(--shadow-base) 20%, transparent);
 }
 
 [data-chat-shell-kind="floating"] .ui-chat-composer-plane {
   background: var(--fva-shell-composer-plane-surface);
   box-shadow:
-    inset 0 1px 0 color-mix(in oklab, var(--fva-shell-border-soft) 88%, transparent),
+    inset 0 1px 0
+      color-mix(in oklab, var(--fva-shell-border-soft) 88%, transparent),
     0 -12px 28px -30px color-mix(in oklab, var(--shadow-base) 20%, transparent);
 }
 
 [data-chat-shell-kind="floating"] .ui-chat-composer-seam {
-  background: linear-gradient(to right, transparent, var(--fva-shell-composer-plane-seam), transparent);
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--fva-shell-composer-plane-seam),
+    transparent
+  );
 }
 
 [data-chat-shell-kind="floating"] [data-chat-composer-form="true"] {
@@ -760,10 +935,16 @@
 
 [data-chat-shell-kind="floating"] [data-chat-composer-dragover="true"] {
   border-color: var(--fva-shell-action-primary);
-  background: color-mix(in oklab, var(--fva-shell-action-primary) 8%, var(--fva-shell-composer-surface));
+  background: color-mix(
+    in oklab,
+    var(--fva-shell-action-primary) 8%,
+    var(--fva-shell-composer-surface)
+  );
 }
 
-[data-chat-shell-kind="floating"] [data-chat-composer-state="ready"] [data-chat-composer-field="true"] {
+[data-chat-shell-kind="floating"]
+  [data-chat-composer-state="ready"]
+  [data-chat-composer-field="true"] {
   box-shadow:
     inset 0 0 0 1px var(--fva-shell-composer-field-active-ring),
     0 0 0 1px color-mix(in oklab, var(--fva-shell-border-soft) 50%, transparent);
@@ -788,10 +969,13 @@
   color: var(--fva-shell-send-disabled-tone);
 }
 
-[data-chat-shell-kind="floating"] [data-chat-composer-state="ready"] [data-chat-send-state="ready"] {
+[data-chat-shell-kind="floating"]
+  [data-chat-composer-state="ready"]
+  [data-chat-send-state="ready"] {
   background: var(--fva-shell-send-ready);
   color: var(--accent-foreground);
-  box-shadow: 0 16px 26px -18px color-mix(in oklab, var(--shadow-base) 32%, transparent);
+  box-shadow: 0 16px 26px -18px
+    color-mix(in oklab, var(--shadow-base) 32%, transparent);
 }
 
 [data-chat-shell-kind="floating"][data-chat-shell-size="default"] {
@@ -813,13 +997,15 @@
 
 [data-chat-fab-launcher="true"][data-chat-route-tone="quiet"] {
   opacity: 0.82;
-  box-shadow: -14px 18px 44px color-mix(in srgb, var(--shadow-base) 22%, transparent);
+  box-shadow: -14px 18px 44px
+    color-mix(in srgb, var(--shadow-base) 22%, transparent);
   transform: scale(0.94);
 }
 
 [data-chat-shell-kind="floating"][data-chat-route-tone="quiet"] {
   opacity: 0.94;
-  box-shadow: -22px 28px 54px color-mix(in srgb, var(--shadow-base) 20%, transparent);
+  box-shadow: -22px 28px 54px
+    color-mix(in srgb, var(--shadow-base) 20%, transparent);
 }
 
 [data-chat-fab-launcher="true"] {
@@ -829,9 +1015,11 @@
   inline-size: var(--fab-launcher-size);
   block-size: var(--fab-launcher-size);
   border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
-  background: linear-gradient(180deg,
+  background: linear-gradient(
+    180deg,
     color-mix(in oklab, var(--accent-interactive) 94%, white) 0%,
-    color-mix(in oklab, var(--accent-interactive) 82%, var(--foreground)) 100%);
+    color-mix(in oklab, var(--accent-interactive) 82%, var(--foreground)) 100%
+  );
   color: var(--accent-foreground);
   box-shadow:
     -20px 20px 60px color-mix(in srgb, var(--shadow-base) 32%, transparent),
@@ -924,11 +1112,24 @@
 
 [data-capability-card="true"] {
   --capability-border: color-mix(in oklab, var(--border) 84%, transparent);
-  --capability-surface: color-mix(in oklab, var(--surface) 94%, var(--background));
-  --capability-shadow: 0 18px 34px -28px color-mix(in oklab, var(--shadow-base) 18%, transparent);
+  --capability-surface: color-mix(
+    in oklab,
+    var(--surface) 94%,
+    var(--background)
+  );
+  --capability-shadow: 0 18px 34px -28px
+    color-mix(in oklab, var(--shadow-base) 18%, transparent);
   --capability-ink: var(--foreground);
-  --capability-ink-muted: color-mix(in oklab, var(--foreground) 72%, transparent);
-  --capability-accent: color-mix(in oklab, var(--accent) 72%, var(--foreground));
+  --capability-ink-muted: color-mix(
+    in oklab,
+    var(--foreground) 72%,
+    transparent
+  );
+  --capability-accent: color-mix(
+    in oklab,
+    var(--accent) 72%,
+    var(--foreground)
+  );
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -942,7 +1143,11 @@
 
 [data-capability-tone="neutral"] {
   --capability-border: color-mix(in oklab, var(--border) 84%, transparent);
-  --capability-surface: color-mix(in oklab, var(--surface) 92%, var(--background));
+  --capability-surface: color-mix(
+    in oklab,
+    var(--surface) 92%,
+    var(--background)
+  );
   --capability-accent: color-mix(in oklab, var(--foreground) 42%, transparent);
 }
 
@@ -955,18 +1160,38 @@
 [data-capability-tone="success"] {
   --capability-border: color-mix(in oklab, var(--accent) 26%, transparent);
   --capability-surface: color-mix(in oklab, var(--accent) 8%, var(--surface));
-  --capability-accent: color-mix(in oklab, var(--accent) 74%, var(--foreground));
+  --capability-accent: color-mix(
+    in oklab,
+    var(--accent) 74%,
+    var(--foreground)
+  );
 }
 
 [data-capability-tone="warning"] {
-  --capability-border: color-mix(in oklab, var(--warning, #b54708) 28%, transparent);
-  --capability-surface: color-mix(in oklab, var(--warning, #b54708) 8%, var(--surface));
+  --capability-border: color-mix(
+    in oklab,
+    var(--warning, #b54708) 28%,
+    transparent
+  );
+  --capability-surface: color-mix(
+    in oklab,
+    var(--warning, #b54708) 8%,
+    var(--surface)
+  );
   --capability-accent: var(--warning, #b54708);
 }
 
 [data-capability-tone="danger"] {
-  --capability-border: color-mix(in oklab, var(--danger, #b42318) 30%, transparent);
-  --capability-surface: color-mix(in oklab, var(--danger, #b42318) 8%, var(--surface));
+  --capability-border: color-mix(
+    in oklab,
+    var(--danger, #b42318) 30%,
+    transparent
+  );
+  --capability-surface: color-mix(
+    in oklab,
+    var(--danger, #b42318) 8%,
+    var(--surface)
+  );
   --capability-accent: var(--danger, #b42318);
 }
 
@@ -977,7 +1202,11 @@
     color-mix(in oklab, var(--accent) 7%, var(--surface)) 0%,
     color-mix(in oklab, var(--surface) 94%, var(--background)) 100%
   );
-  --capability-accent: color-mix(in oklab, var(--accent) 76%, var(--foreground));
+  --capability-accent: color-mix(
+    in oklab,
+    var(--accent) 76%,
+    var(--foreground)
+  );
 }
 
 [data-capability-tone="media"] {
@@ -987,12 +1216,17 @@
     color-mix(in oklab, var(--accent) 5%, white) 0%,
     color-mix(in oklab, var(--surface) 93%, var(--background)) 100%
   );
-  --capability-accent: color-mix(in oklab, var(--accent) 68%, var(--foreground));
+  --capability-accent: color-mix(
+    in oklab,
+    var(--accent) 68%,
+    var(--foreground)
+  );
 }
 
 [data-capability-state="failed"],
 [data-capability-state="canceled"] {
-  box-shadow: 0 18px 34px -28px color-mix(in oklab, var(--capability-accent) 24%, transparent);
+  box-shadow: 0 18px 34px -28px
+    color-mix(in oklab, var(--capability-accent) 24%, transparent);
 }
 
 .ui-capability-card-header {
@@ -1086,7 +1320,8 @@
   flex-direction: column;
   gap: var(--space-1);
   border-radius: 0.95rem;
-  border: 1px solid color-mix(in oklab, var(--capability-border) 88%, transparent);
+  border: 1px solid
+    color-mix(in oklab, var(--capability-border) 88%, transparent);
   background: color-mix(in oklab, var(--background) 54%, transparent);
   padding: var(--space-3);
 }
@@ -1105,7 +1340,11 @@
 .ui-capability-action,
 .ui-capability-detail-drawer-trigger {
   text-decoration: underline;
-  text-decoration-color: color-mix(in oklab, var(--capability-accent) 24%, transparent);
+  text-decoration-color: color-mix(
+    in oklab,
+    var(--capability-accent) 24%,
+    transparent
+  );
   text-underline-offset: 0.18em;
 }
 
@@ -1113,7 +1352,11 @@
 .ui-capability-action:hover,
 .ui-capability-detail-drawer-trigger:hover {
   color: var(--capability-accent);
-  text-decoration-color: color-mix(in oklab, var(--capability-accent) 54%, transparent);
+  text-decoration-color: color-mix(
+    in oklab,
+    var(--capability-accent) 54%,
+    transparent
+  );
 }
 
 .ui-capability-action-rail {
@@ -1140,7 +1383,8 @@
   justify-content: space-between;
   gap: var(--space-2);
   inline-size: 100%;
-  border: 1px solid color-mix(in oklab, var(--capability-border) 90%, transparent);
+  border: 1px solid
+    color-mix(in oklab, var(--capability-border) 90%, transparent);
   border-radius: 0.95rem;
   background: color-mix(in oklab, var(--background) 62%, transparent);
   padding: var(--space-3);
@@ -1158,7 +1402,8 @@
 .ui-capability-disclosure-panel {
   margin-top: var(--space-2);
   border-radius: 0.95rem;
-  border: 1px solid color-mix(in oklab, var(--capability-border) 88%, transparent);
+  border: 1px solid
+    color-mix(in oklab, var(--capability-border) 88%, transparent);
   background: color-mix(in oklab, var(--background) 56%, transparent);
   padding: var(--space-3);
 }
@@ -1177,7 +1422,8 @@
   margin-top: 0.35rem;
   border-radius: 999px;
   background: color-mix(in oklab, var(--capability-accent) 72%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--capability-accent) 14%, transparent);
+  box-shadow: 0 0 0 3px
+    color-mix(in oklab, var(--capability-accent) 14%, transparent);
 }
 
 [data-capability-phase-status="pending"] .ui-capability-timeline-dot,
@@ -1190,13 +1436,15 @@
 [data-capability-phase-status="failed"] .ui-capability-timeline-dot,
 [data-capability-phase-status="failed"] .ui-capability-progress-bubble-dot {
   background: var(--danger, #b42318);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--danger, #b42318) 16%, transparent);
+  box-shadow: 0 0 0 3px
+    color-mix(in oklab, var(--danger, #b42318) 16%, transparent);
 }
 
 [data-capability-phase-status="succeeded"] .ui-capability-timeline-dot,
 [data-capability-phase-status="succeeded"] .ui-capability-progress-bubble-dot {
   background: color-mix(in oklab, var(--success, #15803d) 82%, white 18%);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--success, #15803d) 14%, transparent);
+  box-shadow: 0 0 0 3px
+    color-mix(in oklab, var(--success, #15803d) 14%, transparent);
 }
 
 [data-capability-phase-status="active"] .ui-capability-timeline-dot,
@@ -1251,7 +1499,8 @@
   border: 1px solid color-mix(in oklab, var(--border) 84%, transparent);
   background: color-mix(in oklab, var(--surface) 94%, var(--background));
   padding: var(--space-4);
-  box-shadow: 0 24px 60px -40px color-mix(in oklab, var(--shadow-base) 28%, transparent);
+  box-shadow: 0 24px 60px -40px
+    color-mix(in oklab, var(--shadow-base) 28%, transparent);
 }
 
 .ui-capability-detail-drawer-header {
@@ -1342,8 +1591,16 @@
 
   .theme-swiss .ui-chat-transcript-plane {
     background:
-      linear-gradient(90deg, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px),
-      linear-gradient(180deg, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px),
+      linear-gradient(
+        90deg,
+        color-mix(in oklab, var(--foreground) 6%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--foreground) 6%, transparent) 1px,
+        transparent 1px
+      ),
       var(--background);
     background-size: 4rem 4rem;
   }
@@ -1354,9 +1611,21 @@
 
   .theme-mid-century .ui-chat-transcript-plane {
     background:
-      radial-gradient(circle at 18% 18%, color-mix(in oklab, var(--accent-secondary) 28%, transparent) 0 9rem, transparent 9.25rem),
-      radial-gradient(circle at 84% 22%, color-mix(in oklab, oklch(0.58 0.13 190) 18%, transparent) 0 7rem, transparent 7.25rem),
-      linear-gradient(180deg, var(--background), color-mix(in oklab, var(--background) 92%, var(--surface-muted)));
+      radial-gradient(
+        circle at 18% 18%,
+        color-mix(in oklab, var(--accent-secondary) 28%, transparent) 0 9rem,
+        transparent 9.25rem
+      ),
+      radial-gradient(
+        circle at 84% 22%,
+        color-mix(in oklab, oklch(0.58 0.13 190) 18%, transparent) 0 7rem,
+        transparent 7.25rem
+      ),
+      linear-gradient(
+        180deg,
+        var(--background),
+        color-mix(in oklab, var(--background) 92%, var(--surface-muted))
+      );
   }
 
   .theme-techno-brutalist .ui-chat-header-surface,
@@ -1378,7 +1647,10 @@
   }
 
   .theme-techno-brutalist .ui-chat-message-assistant .prose,
-  .theme-techno-brutalist .ui-chat-message-assistant .prose :where(p, li, strong, em, h1, h2, h3, h4, code) {
+  .theme-techno-brutalist
+    .ui-chat-message-assistant
+    .prose
+    :where(p, li, strong, em, h1, h2, h3, h4, code) {
     color: var(--foreground);
   }
 
@@ -1388,16 +1660,36 @@
 
   .theme-techno-brutalist .ui-chat-transcript-plane {
     background:
-      linear-gradient(90deg, color-mix(in oklab, var(--accent) 18%, transparent) 1px, transparent 1px),
-      linear-gradient(180deg, color-mix(in oklab, var(--accent-secondary) 16%, transparent) 1px, transparent 1px),
-      radial-gradient(circle at 80% 16%, color-mix(in oklab, var(--accent-secondary) 26%, transparent), transparent 22rem),
+      linear-gradient(
+        90deg,
+        color-mix(in oklab, var(--accent) 18%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--accent-secondary) 16%, transparent) 1px,
+        transparent 1px
+      ),
+      radial-gradient(
+        circle at 80% 16%,
+        color-mix(in oklab, var(--accent-secondary) 26%, transparent),
+        transparent 22rem
+      ),
       var(--background);
-    background-size: 2rem 2rem, 2rem 2rem, auto, auto;
+    background-size:
+      2rem 2rem,
+      2rem 2rem,
+      auto,
+      auto;
   }
 
   .theme-techno-brutalist .ui-chat-header-surface::after {
     block-size: 4px;
-    background: repeating-linear-gradient(90deg, var(--accent) 0 1rem, var(--accent-secondary) 1rem 2rem);
+    background: repeating-linear-gradient(
+      90deg,
+      var(--accent) 0 1rem,
+      var(--accent-secondary) 1rem 2rem
+    );
   }
 
   .theme-editorial .ui-chat-header-surface,
@@ -1429,9 +1721,21 @@
 
   .theme-editorial .ui-chat-transcript-plane {
     background:
-      radial-gradient(ellipse at 0% 0%, color-mix(in oklab, var(--accent-secondary) 40%, transparent), transparent 28rem),
-      radial-gradient(ellipse at 100% 0%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 32rem),
-      linear-gradient(180deg, color-mix(in oklab, var(--background) 92%, white), var(--background)),
+      radial-gradient(
+        ellipse at 0% 0%,
+        color-mix(in oklab, var(--accent-secondary) 40%, transparent),
+        transparent 28rem
+      ),
+      radial-gradient(
+        ellipse at 100% 0%,
+        color-mix(in oklab, var(--accent) 10%, transparent),
+        transparent 32rem
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--background) 92%, white),
+        var(--background)
+      ),
       var(--background);
   }
 

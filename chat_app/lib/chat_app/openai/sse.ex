@@ -49,13 +49,18 @@ defmodule ChatApp.OpenAI.SSE do
   defp dispatch_line("data: [DONE]", _pid), do: :ok
 
   defp dispatch_line("data: " <> json, pid) do
-    with {:ok, body} <- Jason.decode(json),
-         content when is_binary(content) <-
-           get_in(body, ["choices", Access.at(0), "delta", "content"]) do
-      send(pid, {:stream_token, content})
-    else
-      _ -> :ok
+    with {:ok, body} <- Jason.decode(json) do
+      # Dispatch stream_usage if the chunk contains a usage block.
+      if is_map(body["usage"]) do
+        send(pid, {:stream_usage, body["usage"]})
+      end
+
+      # Dispatch stream_token for content deltas.
+      content = get_in(body, ["choices", Access.at(0), "delta", "content"])
+      if is_binary(content), do: send(pid, {:stream_token, content})
     end
+
+    :ok
   end
 
   defp dispatch_line(_other, _pid), do: :ok

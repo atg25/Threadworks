@@ -6,6 +6,23 @@ forward in Keep-a-Changelog style.
 
 ## [Unreleased] — Current State (2026-04-24)
 
+### Added (Sprint 15 — Feature Foundation: Persistence + Auth + First Controls, 2026-04-27)
+
+- Added SQLite persistence via Ecto (`ChatApp.Repo`) with `conversations` + `messages` tables.
+- Added `ChatApp.Conversations` boundary for `get_or_create/1`, message append/update, and destructive reset.
+- Added basic-auth gate (env-driven) for non-localhost deployments.
+- Added chat controls: "+ New" (reset), Stop (cancel stream), Regenerate (re-run last user turn).
+- Added three-button theme toggle (system/light/dark) in the header rail.
+
+### Changed (Sprint 15 — Feature Foundation: Persistence + Auth + First Controls, 2026-04-27)
+
+- `ChatLive` now loads messages from SQLite on mount and persists user/assistant turns during streaming.
+- CI runs `mix test.setup` to ensure migrations run before tests.
+
+### Security (Sprint 15 — Feature Foundation: Persistence + Auth + First Controls, 2026-04-27)
+
+- Added optional basic auth (`BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD`) to gate production access.
+
 ### Added (Sprint 14 — Hardening B: Tooling, Docs & Governance, 2026-04-26)
 
 - Wired Vitest into `mix precommit` (runs `npm test` under `assets/`).

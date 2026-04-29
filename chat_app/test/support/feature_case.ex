@@ -15,6 +15,9 @@ defmodule ChatAppWeb.FeatureCase do
 
   use ExUnit.CaseTemplate
 
+  alias ChatApp.Conversations.Conversation
+  alias ChatApp.Repo
+
   using do
     quote do
       use Wallaby.Feature
@@ -25,6 +28,12 @@ defmodule ChatAppWeb.FeatureCase do
   end
 
   setup tags do
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(ChatApp.Repo)
+    Ecto.Adapters.SQL.Sandbox.mode(ChatApp.Repo, {:shared, self()})
+
+    # Keep feature tests isolated: reset persisted conversation rows between tests.
+    Repo.delete_all(Conversation)
+
     # Switch to E2EStub for the duration of the test, restore on exit.
     original_module = Application.get_env(:chat_app, :openai_module)
 

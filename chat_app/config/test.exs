@@ -25,6 +25,13 @@ config :chat_app, :openai_api_key, "sk-test-stub"
 config :chat_app, :openai_module, ChatApp.OpenAI.Stub
 config :chat_app, :req_options, plug: {Req.Test, ChatApp.OpenAI}
 config :chat_app, :allow_hero_override, true
+config :chat_app, :disable_rate_limit, false
+
+config :chat_app, ChatApp.Repo,
+  database: Path.expand("../priv/repo/chat_app_test.db", __DIR__),
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: 5,
+  busy_timeout: 5_000
 
 config :wallaby,
   otp_app: :chat_app,

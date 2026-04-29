@@ -20,16 +20,26 @@ Sprint plans live under `planned/` until work starts; the sprint in flight is un
 | 12        | Phase 2 — Immediate fixes (resilience & cleanup)       | complete | [SPRINT-12-immediate-fixes-resilience.md](complete/SPRINT-12-immediate-fixes-resilience.md)   |
 | 13        | Phase 2 — Hardening (architecture & internals)         | complete | [SPRINT-13-hardening-architecture.md](complete/SPRINT-13-hardening-architecture.md)           |
 | 14        | Phase 2 — Hardening (tooling, docs & governance)       | complete | [SPRINT-14-hardening-tooling.md](complete/SPRINT-14-hardening-tooling.md)                     |
-| 15        | Phase 2 — Persistence, auth & first controls           | planned  | [SPRINT-15-persistence-and-auth.md](planned/SPRINT-15-persistence-and-auth.md)                |
-| 16        | Phase 2 — Feature velocity (sidebar, settings, polish) | planned  | [SPRINT-16-feature-velocity.md](planned/SPRINT-16-feature-velocity.md)                        |
+| 15        | Phase 2 — Persistence, auth & first controls           | complete | [SPRINT-15-persistence-and-auth.md](complete/SPRINT-15-persistence-and-auth.md)               |
+| 16        | Phase 2 — Feature velocity (sidebar, settings, polish) | complete | [SPRINT-16-feature-velocity.md](complete/SPRINT-16-feature-velocity.md)                       |
+| 17        | Phase 3 — Foundation Updates & Bug Fixes               | complete | [SP-03-17-foundation-updates.md](complete/SP-03-17-foundation-updates.md)                   |
+| 18        | Phase 3 — Component Polish & Empty States              | complete | [SP-03-18-component-polish.md](complete/SP-03-18-component-polish.md)                       |
+| 19A       | Phase 3 — Desktop Layout & Header Refactor             | complete (2026-04-29) | [SP-03-19A-desktop-layout.md](complete/SP-03-19A-desktop-layout.md)                         |
+| 19B       | Phase 3 — Mobile Off-Canvas Drawer                     | complete (2026-04-29) | [SP-03-19B-mobile-drawer.md](complete/SP-03-19B-mobile-drawer.md)                         |
+| 20        | Phase 3 — Multi-Theme Engine Overhaul                  | complete (2026-04-29) | [SP-03-20-multi-theme.md](complete/SP-03-20-multi-theme.md)                               |
 
 ## Folders
 
-- **`complete/`** — Sprints 1.1–1.10 (spec-1 delivery), **SPRINT-11**, **SPRINT-12**, **SPRINT-13**, **SPRINT-14** (Phase 2: immediate fixes + hardening).
-- **`planned/`** — **SPRINT-15–16** (Phase 2 remainder). Activate the next one into a working branch / `active/` when starting; see **SPRINT-15** for the next up.
-- **`active/`** — (none; Sprint 14 just closed.)
+- **`complete/`** — Sprints 1.1–1.10 (spec-1 delivery), **SPRINT-11**, **SPRINT-12**, **SPRINT-13**, **SPRINT-14**, **SPRINT-15**, **SPRINT-16**, **SP-03-17**, **SP-03-18**, **SP-03-19A**, **SP-03-19B**, **SP-03-20**.
+- **`planned/`** — None.
+- **`active/`** — None.
 
-## Phase 2 at a glance
+## Phase Progress
 
-- **Complete:** SPRINT-11, SPRINT-12, SPRINT-13, SPRINT-14 (4 of 6 Phase 2 sprints). **Remaining:** SPRINT-15–16 (2 sprints planned). **Next up:** SPRINT-15 ([planned](planned/SPRINT-15-persistence-and-auth.md)).
-- There is no separate phase spec; Phase 2 sprints reference the engineering audit and backlog codes (IF / H / F) in their bodies.
+- **Phase 1:** Complete (10 of 10).
+- **Phase 2:** Complete (6 of 6).
+- **Phase 3:** Complete (5 of 5).
+
+## Current Phase 3 Baseline
+
+An ad-hoc UI pass landed after SP-03-18 and already delivered part of the original 19A/20 scope: the desktop-collapsible sidebar, cleaned-up header icon controls, removal of the top model/API chrome, the named 4-theme selector, and the below-fold footer shell. Phase 3 sprints (through SP-03-20) extended and hardened that baseline rather than reintroducing the older UI.

@@ -37,7 +37,9 @@ defmodule ChatApp.OpenAITest do
 
       Task.start(fn -> OpenAI.stream([%{role: :user, content: "Q"}], pid) end)
 
-      assert_receive {:stream_error, _}, 1000
+      assert_receive {:stream_retrying, 0}, 1000
+      assert_receive {:stream_retrying, 1}, 1500
+      assert_receive {:stream_error, _}, 3000
 
       :gen_tcp.close(listen_sock)
     end
@@ -88,6 +90,84 @@ defmodule ChatApp.OpenAITest do
     OpenAI.stream([%{role: :user, content: "Q"}], self())
 
     assert_received {:captured_model, "gpt-test-12345"}
+  end
+
+  test "stream/3 includes system_prompt as first message with role: system" do
+    parent = self()
+
+    Req.Test.stub(ChatApp.OpenAI, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      decoded = Jason.decode!(body)
+      send(parent, {:captured_messages, decoded["messages"]})
+      Req.Test.text(conn, "data: [DONE]\n\n")
+    end)
+
+    OpenAI.stream(
+      [%{role: :user, content: "hello"}],
+      self(),
+      %{system_prompt: "Be terse."}
+    )
+
+    assert_received {:captured_messages, messages}
+    assert [%{"role" => "system", "content" => "Be terse."} | _rest] = messages
+  end
+
+  test "stream/3 includes temperature in request body when provided" do
+    parent = self()
+
+    Req.Test.stub(ChatApp.OpenAI, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      decoded = Jason.decode!(body)
+      send(parent, {:captured_temperature, decoded["temperature"]})
+      Req.Test.text(conn, "data: [DONE]\n\n")
+    end)
+
+    OpenAI.stream(
+      [%{role: :user, content: "hello"}],
+      self(),
+      %{temperature: 0.4}
+    )
+
+    assert_received {:captured_temperature, 0.4}
+  end
+
+  # ---------------------------------------------------------------------------
+  # TASK 5 — :stream_usage emission tests
+  # ---------------------------------------------------------------------------
+
+  test "stream emits :stream_usage when the usage block arrives" do
+    parent = self()
+
+    # SSE response includes a usage chunk followed by [DONE]
+    usage_chunk =
+      ~s(data: {"choices":[{"delta":{"content":""}}],"usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15}}\n\n)
+
+    Req.Test.stub(ChatApp.OpenAI, fn conn ->
+      Req.Test.text(conn, usage_chunk <> "data: [DONE]\n\n")
+    end)
+
+    OpenAI.stream([%{role: :user, content: "Q"}], parent)
+
+    assert_received {:stream_usage,
+                     %{"prompt_tokens" => 10, "completion_tokens" => 5, "total_tokens" => 15}}
+  end
+
+  test "stream still works correctly when the usage block is missing" do
+    parent = self()
+
+    # Normal SSE response without usage block
+    Req.Test.stub(ChatApp.OpenAI, fn conn ->
+      Req.Test.text(
+        conn,
+        ~s(data: {"choices":[{"delta":{"content":"hello"}}]}\n\n) <> "data: [DONE]\n\n"
+      )
+    end)
+
+    OpenAI.stream([%{role: :user, content: "Q"}], parent)
+
+    assert_received {:stream_token, "hello"}
+    assert_received :stream_done
+    refute_received {:stream_usage, _}
   end
 
   defp restore_env(key, nil), do: Application.delete_env(:chat_app, key)

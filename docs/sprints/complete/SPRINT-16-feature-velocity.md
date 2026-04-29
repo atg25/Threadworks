@@ -1,15 +1,18 @@
 ---
-status: planned
+status: complete
+activated: 2026-04-27
+completed: 2026-04-28
 ---
 
 # SPRINT 16 — Feature Velocity: Sidebar, Settings, Polish
 
-**Status:** PLANNED
+**Status:** COMPLETED
 **Created:** 2026-04-24
-**Activated:** TBD
-**Completed:** TBD
+**Activated:** 2026-04-27
+**Completed:** 2026-04-28
 
 ## Goal
+
 Convert the persistence + auth platform from Sprint 15 into product surface area: a multi-conversation sidebar, a settings drawer with model + system-prompt + temperature, hover controls on assistant bubbles, code-block polish, token / cost accounting, and bounded retry semantics.
 
 **Total effort:** ~14 hours (4 × M + 2 × S)
@@ -23,90 +26,90 @@ Per-task descriptions below contain each task's primary tests. This section adds
 
 ### Layer summary
 
-| Layer | Tool | Test files | Tasks |
-| --- | --- | --- | --- |
-| Unit | ExUnit + `Ecto.Changeset` | `test/chat_app/conversations/conversation_test.exs` (extended), `test/chat_app/conversations/usage_record_test.exs` (new), `test/chat_app/markdown_test.exs` (extended), `test/chat_app/openai_retry_test.exs` (new pure helpers) | 1, 2, 4, 5, 6 |
-| Integration (DB + LiveView) | `Phoenix.LiveViewTest`, `DataCase`, `:telemetry.attach` | `test/chat_app_web/live/chat_live_sidebar_test.exs` (new), `test/chat_app_web/live/chat_live_settings_test.exs` (new), `test/chat_app_web/live/chat_live_feedback_test.exs` (new), `test/chat_app_web/live/chat_live_retry_test.exs` (new) | 1, 2, 3, 5, 6 |
-| Integration (HTTP / SSE) | `Bypass`, `Req.Test` | `test/chat_app/openai_test.exs` (extended), `test/chat_app/openai_retry_test.exs` | 2, 5, 6 |
-| Hooks (JS unit) | Vitest + jsdom | `assets/test/hooks/Clipboard.test.js`, `assets/test/hooks/PromptOnEvent.test.js` | 1, 3 |
-| E2E | Wallaby + ChromeDriver (`@moduletag :e2e`) | `test/chat_app_web/features/chat_e2e_test.exs` (extended) | 1, 2, 3, 4 |
-| Static | ripgrep, `mix ecto.migrate`, `mix compile --warnings-as-errors` | CI step / PR description | 1, 2, 4, 5 |
+| Layer                       | Tool                                                            | Test files                                                                                                                                                                                                                                 | Tasks         |
+| --------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| Unit                        | ExUnit + `Ecto.Changeset`                                       | `test/chat_app/conversations/conversation_test.exs` (extended), `test/chat_app/conversations/usage_record_test.exs` (new), `test/chat_app/markdown_test.exs` (extended), `test/chat_app/openai_retry_test.exs` (new pure helpers)          | 1, 2, 4, 5, 6 |
+| Integration (DB + LiveView) | `Phoenix.LiveViewTest`, `DataCase`, `:telemetry.attach`         | `test/chat_app_web/live/chat_live_sidebar_test.exs` (new), `test/chat_app_web/live/chat_live_settings_test.exs` (new), `test/chat_app_web/live/chat_live_feedback_test.exs` (new), `test/chat_app_web/live/chat_live_retry_test.exs` (new) | 1, 2, 3, 5, 6 |
+| Integration (HTTP / SSE)    | `Bypass`, `Req.Test`                                            | `test/chat_app/openai_test.exs` (extended), `test/chat_app/openai_retry_test.exs`                                                                                                                                                          | 2, 5, 6       |
+| Hooks (JS unit)             | Vitest + jsdom                                                  | `assets/test/hooks/Clipboard.test.js`, `assets/test/hooks/PromptOnEvent.test.js`                                                                                                                                                           | 1, 3          |
+| E2E                         | Wallaby + ChromeDriver (`@moduletag :e2e`)                      | `test/chat_app_web/features/chat_e2e_test.exs` (extended)                                                                                                                                                                                  | 1, 2, 3, 4    |
+| Static                      | ripgrep, `mix ecto.migrate`, `mix compile --warnings-as-errors` | CI step / PR description                                                                                                                                                                                                                   | 1, 2, 4, 5    |
 
 ### Unit tests
 
-| Test name | Inputs | Expected | Guards against |
-| --- | --- | --- | --- |
-| `auto_title_from_first_message/1 trims to 60 chars` | A 200-char user message. | Returned title is exactly 60 chars; no trailing punctuation orphans (final char isn't a partial multi-byte rune). | TASK 1 — sidebar showing 200-char wrapped titles. |
-| `auto_title_from_first_message/1 collapses whitespace` | `"  hello\n\n   world  "`. | `"hello world"`. | TASK 1 — newline characters bleeding into the sidebar HTML. |
-| `Conversation.changeset/2 rejects unknown model values` | `Conversation.changeset(conv, %{model: "fake-gpt-99"})`. | `valid?` is false; `errors[:model]` mentions `:inclusion`. | TASK 2 — typo in model name silently sent to OpenAI (which 400s). |
-| `Conversation.changeset/2 rejects temperature outside [0.0, 2.0]` | `temperature: -0.1`, then `2.1`. | Both invalid; `errors[:temperature]` references `:greater_than_or_equal_to` / `:less_than_or_equal_to`. | TASK 2 — out-of-range temperature crashing OpenAI request. |
-| `Conversation.changeset/2 rejects system_prompt longer than 4000 chars` | A 4001-char binary. | `valid?` is false; `errors[:system_prompt]` mentions `:length`. | TASK 2 — runaway memory / token cost from giant system prompts. |
-| `Markdown.to_html wraps a fenced elixir block in .ui-code-block with data-language=elixir` | ```` ```elixir\nIO.puts(\"hi\")\n``` ```` | Output contains `<div class="ui-code-block" data-language="elixir">` with a header span containing `elixir` and a `<pre><code class="elixir">` body. | TASK 4 — wrapper missing for valid fences. |
-| `Markdown.to_html unlabeled fence yields data-language=text` | ```` ```\nplain\n``` ```` | Output contains `data-language="text"`. | TASK 4 — `nil` rendered into the attribute. |
-| `Markdown.to_html does NOT wrap inline code` | `` `print("hi")` `` (single backtick). | Output contains `<code>` but no `<div class="ui-code-block">`. | TASK 4 — over-eager wrapping breaking inline code styling. |
-| `Markdown.to_html with multiple code blocks wraps each independently` | Two distinct fences in one message. | Two `<div class="ui-code-block">` siblings, each with its own data-language and copy button. | TASK 4 — first-block-only regression. |
-| `record_usage cost computation with gpt-4o pricing` | `prompt_tokens: 1_000_000`, `completion_tokens: 500_000`, `model: "gpt-4o"`, prices `{2_50, 10_00}` cents per 1M. | `estimated_cost_cents == 250 + 500 == 750` (rounded to nearest cent). | TASK 5 — off-by-1000 multiplication errors silently overcharging users. |
-| `record_usage with unknown model logs warning and stores cost = 0` | `model: "fake-gpt-99"`. | Insert succeeds with `estimated_cost_cents: 0`; `capture_log/1` contains `"unknown model"`. | TASK 5 — silent 0-cost on every conversation. |
-| `cents_to_dollars/1 formatting` | `0`, `7`, `1234`. | `"$0.00"`, `"$0.07"`, `"$12.34"`. | TASK 5 — locale or float-arithmetic drift. |
-| `backoff_ms increases between retries` | `0`, `1`, `2`. | `250`, `500`, `1000`. | TASK 6 — flat backoff causing thundering retries. |
-| `drop_last_assistant/1 only drops a trailing assistant entry` | `[user, assistant]`, `[user]`, `[]`. | `[user]`, `[user]`, `[]`. | TASK 6 — `:stream_retrying` deleting the user message. |
+| Test name                                                                                  | Inputs                                                                                                            | Expected                                                                                                                                             | Guards against                                                          |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `auto_title_from_first_message/1 trims to 60 chars`                                        | A 200-char user message.                                                                                          | Returned title is exactly 60 chars; no trailing punctuation orphans (final char isn't a partial multi-byte rune).                                    | TASK 1 — sidebar showing 200-char wrapped titles.                       |
+| `auto_title_from_first_message/1 collapses whitespace`                                     | `"  hello\n\n   world  "`.                                                                                        | `"hello world"`.                                                                                                                                     | TASK 1 — newline characters bleeding into the sidebar HTML.             |
+| `Conversation.changeset/2 rejects unknown model values`                                    | `Conversation.changeset(conv, %{model: "fake-gpt-99"})`.                                                          | `valid?` is false; `errors[:model]` mentions `:inclusion`.                                                                                           | TASK 2 — typo in model name silently sent to OpenAI (which 400s).       |
+| `Conversation.changeset/2 rejects temperature outside [0.0, 2.0]`                          | `temperature: -0.1`, then `2.1`.                                                                                  | Both invalid; `errors[:temperature]` references `:greater_than_or_equal_to` / `:less_than_or_equal_to`.                                              | TASK 2 — out-of-range temperature crashing OpenAI request.              |
+| `Conversation.changeset/2 rejects system_prompt longer than 4000 chars`                    | A 4001-char binary.                                                                                               | `valid?` is false; `errors[:system_prompt]` mentions `:length`.                                                                                      | TASK 2 — runaway memory / token cost from giant system prompts.         |
+| `Markdown.to_html wraps a fenced elixir block in .ui-code-block with data-language=elixir` | ` ```elixir\nIO.puts(\"hi\")\n``` `                                                                               | Output contains `<div class="ui-code-block" data-language="elixir">` with a header span containing `elixir` and a `<pre><code class="elixir">` body. | TASK 4 — wrapper missing for valid fences.                              |
+| `Markdown.to_html unlabeled fence yields data-language=text`                               | ` ```\nplain\n``` `                                                                                               | Output contains `data-language="text"`.                                                                                                              | TASK 4 — `nil` rendered into the attribute.                             |
+| `Markdown.to_html does NOT wrap inline code`                                               | `` `print("hi")` `` (single backtick).                                                                            | Output contains `<code>` but no `<div class="ui-code-block">`.                                                                                       | TASK 4 — over-eager wrapping breaking inline code styling.              |
+| `Markdown.to_html with multiple code blocks wraps each independently`                      | Two distinct fences in one message.                                                                               | Two `<div class="ui-code-block">` siblings, each with its own data-language and copy button.                                                         | TASK 4 — first-block-only regression.                                   |
+| `record_usage cost computation with gpt-4o pricing`                                        | `prompt_tokens: 1_000_000`, `completion_tokens: 500_000`, `model: "gpt-4o"`, prices `{2_50, 10_00}` cents per 1M. | `estimated_cost_cents == 250 + 500 == 750` (rounded to nearest cent).                                                                                | TASK 5 — off-by-1000 multiplication errors silently overcharging users. |
+| `record_usage with unknown model logs warning and stores cost = 0`                         | `model: "fake-gpt-99"`.                                                                                           | Insert succeeds with `estimated_cost_cents: 0`; `capture_log/1` contains `"unknown model"`.                                                          | TASK 5 — silent 0-cost on every conversation.                           |
+| `cents_to_dollars/1 formatting`                                                            | `0`, `7`, `1234`.                                                                                                 | `"$0.00"`, `"$0.07"`, `"$12.34"`.                                                                                                                    | TASK 5 — locale or float-arithmetic drift.                              |
+| `backoff_ms increases between retries`                                                     | `0`, `1`, `2`.                                                                                                    | `250`, `500`, `1000`.                                                                                                                                | TASK 6 — flat backoff causing thundering retries.                       |
+| `drop_last_assistant/1 only drops a trailing assistant entry`                              | `[user, assistant]`, `[user]`, `[]`.                                                                              | `[user]`, `[user]`, `[]`.                                                                                                                            | TASK 6 — `:stream_retrying` deleting the user message.                  |
 
 ### Integration tests
 
-| Test name | Inputs | Expected | Guards against |
-| --- | --- | --- | --- |
-| `sidebar lists all conversations for the session` | Insert 3 conversations for `"sess-A"` and 1 for `"sess-B"`; mount as `"sess-A"`. | Sidebar `[data-conversation-id]` element count is 3; ids match the inserted rows. | TASK 1 — leakage across sessions. |
-| `new_conversation creates a row and switches to it` | Mount with one existing conv; click "+ New". | A new conversation row is in DB; `assigns.current_conversation_id` equals the new id; `assigns.messages == []`. | TASK 1 — "+ New" appearing to work but not changing the active id. |
-| `switch_conversation loads its messages` | Two convs with distinct messages; click the inactive one in the sidebar. | After event, `assigns.messages` reflects the clicked conv; sidebar's active styling moves. | TASK 1 — switching that mounts state but doesn't load messages. |
-| `delete_conversation removes the row and switches to the next` | Three convs; delete the active one. | DB count drops to 2; `assigns.current_conversation_id` is now the next-most-recent. | TASK 1 — leaving `current_conversation_id` pointing at a deleted row. |
-| `deleting the only conversation creates a fresh one` | One conv; delete it. | DB count is 1 (a new empty conv); `assigns.messages == []`. | TASK 1 — empty sidebar with no recovery path. |
-| `first user message auto-titles the conversation` | Send `"What is OTP?"` as the first message in a fresh conv. | After `:stream_done`: `Repo.get!(Conversation, id).title == "What is OTP?"` (≤60 chars). | TASK 1 — Untitled forever in the sidebar. |
-| `toggle_settings opens and closes the drawer` | Click the ⚙ button; click again. | After first click: `assigns.settings_open == true`; drawer DOM present. After second: `false`; drawer absent. | TASK 2 — drawer stuck open / closed after click. |
-| `save_settings persists model + system_prompt + temperature` | Submit form with `{model: "gpt-4o-mini", system_prompt: "Be terse.", temperature: "0.4"}`. | `Repo.get!(Conversation, id)` has matching field values; `assigns.current_conversation` is reloaded; flash `"Settings saved"`. | TASK 2 — form bypassed by missing changeset cast. |
-| `send_message uses the saved settings` | Save `{system_prompt: "Be terse.", temperature: 0.4, model: "gpt-4o-mini"}`; submit `"hello"`; capture `Req.Test` body. | Body's `model == "gpt-4o-mini"`; `messages` first entry is `%{role: "system", content: "Be terse."}`; `temperature == 0.4`. | TASK 2 — settings UI visible but never reaching the request. |
-| `send_message without saved settings omits temperature and system role` | Fresh conv; submit `"hello"`. | Body's `model` falls back to `Application.get_env(:chat_app, :openai_model, ...)`; no `temperature` key; no `role: "system"` entry. | TASK 2 — defaults polluting the request body with nils. |
-| `feedback event emits telemetry with rating + conversation_id` | Click ▲ button on assistant bubble; `:telemetry.attach` on `[:chat_app, :feedback]`. | Handler runs once with metadata `%{conversation_id: ^id, message_index: ^idx, rating: "up"}`. | TASK 3 — silent feedback events with no observability. |
-| `feedback event sets a flash` | Click ▼. | `Phoenix.Flash.get(view.flash, :info) == "Thanks for the feedback."`. | TASK 3 — UX feedback missing. |
-| `XSS protection from Sprint 11 TASK 2 is preserved through the wrapper` | Markdown ```` ```\n<script>alert(1)</script>\n``` ```` | Rendered HTML contains `&lt;script&gt;`; no literal `<script>` substring; `.ui-code-block` wrapper is present. | TASK 4 — wrapping accidentally re-enabling raw HTML. |
-| `transport error retries up to 2 times` | Bypass returns `{:error, :closed}` twice, then 200 with a normal stream. | LiveView ultimately receives `:stream_done`; log shows two retry warnings. | TASK 6 — retries silently disabled. |
-| `3rd transport error escalates to :stream_error` | Bypass returns `{:error, :closed}` on every attempt. | LiveView receives `:stream_error` after the 3rd attempt; partial assistant message has been cleared. | TASK 6 — infinite retry loop. |
-| `4xx response does NOT retry` | Bypass returns 401. | `:stream_error` arrives immediately; log contains exactly one entry, no retry warnings. | TASK 6 — wasted retries on auth failures (and rate-limit headers). |
-| `5xx response retries` | Bypass returns 500 once, then 200. | `:stream_done` arrives; one retry warning logged. | TASK 6 — over-eager classification of 5xx as fatal. |
-| `:stream_retrying clears the partial assistant message in DB and assigns` | Drive 3 tokens, then `:stream_retrying`. | `assigns.stream_buffer == ""`; partial DB row deleted; transient error in `assigns.errors`. | TASK 6 — duplicate-prefix artifact. |
-| `usage_for_conversation sums all records` | Insert 3 usage_records with `total_tokens: [100, 200, 300]` and `estimated_cost_cents: [1, 2, 3]`. | `usage_for_conversation(id) == %{total_tokens: 600, total_cost_cents: 6}` (or whatever the agreed shape is). | TASK 5 — wrong aggregation field. |
+| Test name                                                                 | Inputs                                                                                                                  | Expected                                                                                                                            | Guards against                                                        |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `sidebar lists all conversations for the session`                         | Insert 3 conversations for `"sess-A"` and 1 for `"sess-B"`; mount as `"sess-A"`.                                        | Sidebar `[data-conversation-id]` element count is 3; ids match the inserted rows.                                                   | TASK 1 — leakage across sessions.                                     |
+| `new_conversation creates a row and switches to it`                       | Mount with one existing conv; click "+ New".                                                                            | A new conversation row is in DB; `assigns.current_conversation_id` equals the new id; `assigns.messages == []`.                     | TASK 1 — "+ New" appearing to work but not changing the active id.    |
+| `switch_conversation loads its messages`                                  | Two convs with distinct messages; click the inactive one in the sidebar.                                                | After event, `assigns.messages` reflects the clicked conv; sidebar's active styling moves.                                          | TASK 1 — switching that mounts state but doesn't load messages.       |
+| `delete_conversation removes the row and switches to the next`            | Three convs; delete the active one.                                                                                     | DB count drops to 2; `assigns.current_conversation_id` is now the next-most-recent.                                                 | TASK 1 — leaving `current_conversation_id` pointing at a deleted row. |
+| `deleting the only conversation creates a fresh one`                      | One conv; delete it.                                                                                                    | DB count is 1 (a new empty conv); `assigns.messages == []`.                                                                         | TASK 1 — empty sidebar with no recovery path.                         |
+| `first user message auto-titles the conversation`                         | Send `"What is OTP?"` as the first message in a fresh conv.                                                             | After `:stream_done`: `Repo.get!(Conversation, id).title == "What is OTP?"` (≤60 chars).                                            | TASK 1 — Untitled forever in the sidebar.                             |
+| `toggle_settings opens and closes the drawer`                             | Click the ⚙ button; click again.                                                                                        | After first click: `assigns.settings_open == true`; drawer DOM present. After second: `false`; drawer absent.                       | TASK 2 — drawer stuck open / closed after click.                      |
+| `save_settings persists model + system_prompt + temperature`              | Submit form with `{model: "gpt-4o-mini", system_prompt: "Be terse.", temperature: "0.4"}`.                              | `Repo.get!(Conversation, id)` has matching field values; `assigns.current_conversation` is reloaded; flash `"Settings saved"`.      | TASK 2 — form bypassed by missing changeset cast.                     |
+| `send_message uses the saved settings`                                    | Save `{system_prompt: "Be terse.", temperature: 0.4, model: "gpt-4o-mini"}`; submit `"hello"`; capture `Req.Test` body. | Body's `model == "gpt-4o-mini"`; `messages` first entry is `%{role: "system", content: "Be terse."}`; `temperature == 0.4`.         | TASK 2 — settings UI visible but never reaching the request.          |
+| `send_message without saved settings omits temperature and system role`   | Fresh conv; submit `"hello"`.                                                                                           | Body's `model` falls back to `Application.get_env(:chat_app, :openai_model, ...)`; no `temperature` key; no `role: "system"` entry. | TASK 2 — defaults polluting the request body with nils.               |
+| `feedback event emits telemetry with rating + conversation_id`            | Click ▲ button on assistant bubble; `:telemetry.attach` on `[:chat_app, :feedback]`.                                    | Handler runs once with metadata `%{conversation_id: ^id, message_index: ^idx, rating: "up"}`.                                       | TASK 3 — silent feedback events with no observability.                |
+| `feedback event sets a flash`                                             | Click ▼.                                                                                                                | `Phoenix.Flash.get(view.flash, :info) == "Thanks for the feedback."`.                                                               | TASK 3 — UX feedback missing.                                         |
+| `XSS protection from Sprint 11 TASK 2 is preserved through the wrapper`   | Markdown ` ```\n<script>alert(1)</script>\n``` `                                                                        | Rendered HTML contains `&lt;script&gt;`; no literal `<script>` substring; `.ui-code-block` wrapper is present.                      | TASK 4 — wrapping accidentally re-enabling raw HTML.                  |
+| `transport error retries up to 2 times`                                   | Bypass returns `{:error, :closed}` twice, then 200 with a normal stream.                                                | LiveView ultimately receives `:stream_done`; log shows two retry warnings.                                                          | TASK 6 — retries silently disabled.                                   |
+| `3rd transport error escalates to :stream_error`                          | Bypass returns `{:error, :closed}` on every attempt.                                                                    | LiveView receives `:stream_error` after the 3rd attempt; partial assistant message has been cleared.                                | TASK 6 — infinite retry loop.                                         |
+| `4xx response does NOT retry`                                             | Bypass returns 401.                                                                                                     | `:stream_error` arrives immediately; log contains exactly one entry, no retry warnings.                                             | TASK 6 — wasted retries on auth failures (and rate-limit headers).    |
+| `5xx response retries`                                                    | Bypass returns 500 once, then 200.                                                                                      | `:stream_done` arrives; one retry warning logged.                                                                                   | TASK 6 — over-eager classification of 5xx as fatal.                   |
+| `:stream_retrying clears the partial assistant message in DB and assigns` | Drive 3 tokens, then `:stream_retrying`.                                                                                | `assigns.stream_buffer == ""`; partial DB row deleted; transient error in `assigns.errors`.                                         | TASK 6 — duplicate-prefix artifact.                                   |
+| `usage_for_conversation sums all records`                                 | Insert 3 usage_records with `total_tokens: [100, 200, 300]` and `estimated_cost_cents: [1, 2, 3]`.                      | `usage_for_conversation(id) == %{total_tokens: 600, total_cost_cents: 6}` (or whatever the agreed shape is).                        | TASK 5 — wrong aggregation field.                                     |
 
 ### Hook tests (Vitest + jsdom)
 
-| Test name | Inputs | Expected | Guards against |
-| --- | --- | --- | --- |
-| `Clipboard hook writes the dispatched text` | Mock `navigator.clipboard.writeText`; dispatch `phx:copy` with `{text: "hello"}`. | Mock called once with `"hello"`. | TASK 3 — hook bound to wrong event name. |
-| `Code-block copy delegated handler reads data-copy-text` | Render a `<button class="ui-code-block-copy" data-copy-text="snippet">Copy</button>`; dispatch `click`. | `navigator.clipboard.writeText` called once with `"snippet"`. | TASK 4 — handler reading inner text instead of the data attribute (loses escapes). |
-| `PromptOnEvent ignores empty / whitespace input` | Stub `window.prompt` to return `""`, then `"   "`. | `pushEvent("rename_conversation", _)` is NOT called either time. | TASK 1 — accidentally renaming to empty / spaces. |
+| Test name                                                | Inputs                                                                                                  | Expected                                                         | Guards against                                                                     |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `Clipboard hook writes the dispatched text`              | Mock `navigator.clipboard.writeText`; dispatch `phx:copy` with `{text: "hello"}`.                       | Mock called once with `"hello"`.                                 | TASK 3 — hook bound to wrong event name.                                           |
+| `Code-block copy delegated handler reads data-copy-text` | Render a `<button class="ui-code-block-copy" data-copy-text="snippet">Copy</button>`; dispatch `click`. | `navigator.clipboard.writeText` called once with `"snippet"`.    | TASK 4 — handler reading inner text instead of the data attribute (loses escapes). |
+| `PromptOnEvent ignores empty / whitespace input`         | Stub `window.prompt` to return `""`, then `"   "`.                                                      | `pushEvent("rename_conversation", _)` is NOT called either time. | TASK 1 — accidentally renaming to empty / spaces.                                  |
 
 ### E2E tests (Wallaby — `@moduletag :e2e`)
 
-| Test name | Inputs | Expected | Guards against |
-| --- | --- | --- | --- |
-| Positive — full sidebar flow | Open `/`; create a conv via "+ New"; send `"hello"`; create another conv via "+ New"; send `"second"`; click the first conv in the sidebar. | After click, the first conv's messages render; sidebar's active highlight moves; refresh preserves state. | TASK 1 — switching that breaks DB queries or DOM identity. |
-| Positive — settings drawer round-trip | Open `/`; click ⚙; pick `gpt-4o-mini`; type a system prompt; set temperature 0.5; submit; close drawer; send `"hi"`; capture stub body. | Body uses the saved model + system prompt + temperature. | TASK 2 — drawer state lost on close. |
-| Positive — code-block copy works in browser | Send a prompt that yields a fenced code block (stub returns the markdown directly); click the code block's "Copy" button. | Browser clipboard contains the un-escaped code text. | TASK 4 — escape leakage into the clipboard. |
-| Negative — sidebar gracefully handles deleting the active conversation | Two convs; click ✕ on the active one; confirm. | Active id flips to the other conv; messages render; no client-side error. | TASK 1 — active conv deleted but state still references it → 500 on next event. |
-| Negative — settings reject out-of-range temperature with a flash | Open settings; set temperature to `3.0` via dev-tools (bypassing the slider's `max`); submit. | Drawer stays open; flash error mentions `"temperature"`; no DB update. | TASK 2 — server-side validation missing. |
-| Negative — token / cost header gracefully handles a missing usage block | Stub OpenAI to send `:stream_done` without a preceding `:stream_usage`. | Header still shows the prior cost (or `$0.00` for a new conv); no JS error; no Phoenix crash. | TASK 5 — UI assuming usage always arrives. |
-| Negative — mid-stream transport drop triggers retry without duplicate prefix | Stub OpenAI to emit 5 tokens then drop; on retry serve the full 20 tokens. | The visible bubble does NOT contain the first 5 tokens twice; final text equals the second attempt's full output. | TASK 6 — append-style retry producing duplicated text. |
+| Test name                                                                    | Inputs                                                                                                                                      | Expected                                                                                                          | Guards against                                                                  |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Positive — full sidebar flow                                                 | Open `/`; create a conv via "+ New"; send `"hello"`; create another conv via "+ New"; send `"second"`; click the first conv in the sidebar. | After click, the first conv's messages render; sidebar's active highlight moves; refresh preserves state.         | TASK 1 — switching that breaks DB queries or DOM identity.                      |
+| Positive — settings drawer round-trip                                        | Open `/`; click ⚙; pick `gpt-4o-mini`; type a system prompt; set temperature 0.5; submit; close drawer; send `"hi"`; capture stub body.     | Body uses the saved model + system prompt + temperature.                                                          | TASK 2 — drawer state lost on close.                                            |
+| Positive — code-block copy works in browser                                  | Send a prompt that yields a fenced code block (stub returns the markdown directly); click the code block's "Copy" button.                   | Browser clipboard contains the un-escaped code text.                                                              | TASK 4 — escape leakage into the clipboard.                                     |
+| Negative — sidebar gracefully handles deleting the active conversation       | Two convs; click ✕ on the active one; confirm.                                                                                              | Active id flips to the other conv; messages render; no client-side error.                                         | TASK 1 — active conv deleted but state still references it → 500 on next event. |
+| Negative — settings reject out-of-range temperature with a flash             | Open settings; set temperature to `3.0` via dev-tools (bypassing the slider's `max`); submit.                                               | Drawer stays open; flash error mentions `"temperature"`; no DB update.                                            | TASK 2 — server-side validation missing.                                        |
+| Negative — token / cost header gracefully handles a missing usage block      | Stub OpenAI to send `:stream_done` without a preceding `:stream_usage`.                                                                     | Header still shows the prior cost (or `$0.00` for a new conv); no JS error; no Phoenix crash.                     | TASK 5 — UI assuming usage always arrives.                                      |
+| Negative — mid-stream transport drop triggers retry without duplicate prefix | Stub OpenAI to emit 5 tokens then drop; on retry serve the full 20 tokens.                                                                  | The visible bubble does NOT contain the first 5 tokens twice; final text equals the second attempt's full output. | TASK 6 — append-style retry producing duplicated text.                          |
 
 ### Static / CI checks (no test framework)
 
-| Check | Inputs | Expected | Guards against |
-| --- | --- | --- | --- |
-| Migration `20260501000000_allow_multiple_conversations_per_session` exists and is idempotent | `mix ecto.migrate` then `mix ecto.migrate` again. | Second run prints `Already up`. | TASK 1 — non-idempotent unique-index drop. |
-| `unique_index(:conversations, [:session_id])` is removed by the new migration | `rg "unique_index\\(:conversations" chat_app/priv/repo/migrations/` | The TASK 1 migration explicitly drops it; no leftover unique constraint elsewhere. | TASK 1 — second-conv insert fails with constraint error. |
-| `usage_records` table created with FK ON DELETE CASCADE | `rg "on_delete: :delete_all" chat_app/priv/repo/migrations/*usage*` | At least two matches (conversation_id, message_id). | TASK 5 — orphaned rows after delete. |
-| `floki` dependency available outside `:test` | `rg "{:floki," chat_app/mix.exs` | The `only: :test` modifier is removed. | TASK 4 — `Markdown.to_html/1` undefined in dev/prod. |
-| `stream_options: %{include_usage: true}` present in the OpenAI body builder | `rg "include_usage" chat_app/lib/chat_app/openai.ex` | Exactly one match. | TASK 5 — feature shipped but API never asked for usage. |
-| `@max_retries 2` and `@prices_per_1m_tokens` are module attributes (not magic numbers) | `rg "@max_retries|@prices_per_1m_tokens" chat_app/lib/chat_app/` | One match each. | TASKS 5+6 — drift / inconsistent values across call sites. |
-| `mix compile --warnings-as-errors` clean after schema additions | Run after each task. | Exit 0; no unused-alias / unused-import warnings. | All tasks — leftover scaffolding from refactors. |
-| `mix precommit` exits 0 with the new test files in place | Run after all tasks. | Exit 0; output includes `vitest` step (from Sprint 14). | All tasks — broken test wiring. |
+| Check                                                                                        | Inputs                                                              | Expected                                                                           | Guards against                                           |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------- |
+| Migration `20260501000000_allow_multiple_conversations_per_session` exists and is idempotent | `mix ecto.migrate` then `mix ecto.migrate` again.                   | Second run prints `Already up`.                                                    | TASK 1 — non-idempotent unique-index drop.               |
+| `unique_index(:conversations, [:session_id])` is removed by the new migration                | `rg "unique_index\\(:conversations" chat_app/priv/repo/migrations/` | The TASK 1 migration explicitly drops it; no leftover unique constraint elsewhere. | TASK 1 — second-conv insert fails with constraint error. |
+| `usage_records` table created with FK ON DELETE CASCADE                                      | `rg "on_delete: :delete_all" chat_app/priv/repo/migrations/*usage*` | At least two matches (conversation_id, message_id).                                | TASK 5 — orphaned rows after delete.                     |
+| `floki` dependency available outside `:test`                                                 | `rg "{:floki," chat_app/mix.exs`                                    | The `only: :test` modifier is removed.                                             | TASK 4 — `Markdown.to_html/1` undefined in dev/prod.     |
+| `stream_options: %{include_usage: true}` present in the OpenAI body builder                  | `rg "include_usage" chat_app/lib/chat_app/openai.ex`                | Exactly one match.                                                                 | TASK 5 — feature shipped but API never asked for usage.  |
+| `@max_retries 2` and `@prices_per_1m_tokens` are module attributes (not magic numbers)       | `rg "@max_retries                                                   | @prices_per_1m_tokens" chat_app/lib/chat_app/`                                     | One match each.                                          | TASKS 5+6 — drift / inconsistent values across call sites. |
+| `mix compile --warnings-as-errors` clean after schema additions                              | Run after each task.                                                | Exit 0; no unused-alias / unused-import warnings.                                  | All tasks — leftover scaffolding from refactors.         |
+| `mix precommit` exits 0 with the new test files in place                                     | Run after all tasks.                                                | Exit 0; output includes `vitest` step (from Sprint 14).                            | All tasks — broken test wiring.                          |
 
 ---
 
@@ -120,6 +123,7 @@ Sprint 15 gives every browser session a single persistent conversation. F-3 expa
 **Exact Scope:**
 
 - `chat_app/lib/chat_app/conversations.ex`: add functions:
+
   ```elixir
   def list_conversations(session_id) when is_binary(session_id) do
     # For v1: all conversations are scoped by session_id; multi-user lands later.
@@ -158,6 +162,7 @@ Sprint 15 gives every browser session a single persistent conversation. F-3 expa
   Note: Sprint 15's `get_or_create/1` keyed conversations on `session_id`. With multiple conversations per session, `session_id` is no longer unique on `conversations`. Migration:
 
 - `chat_app/priv/repo/migrations/20260501000000_allow_multiple_conversations_per_session.exs`:
+
   ```elixir
   defmodule ChatApp.Repo.Migrations.AllowMultipleConversationsPerSession do
     use Ecto.Migration
@@ -172,6 +177,7 @@ Sprint 15 gives every browser session a single persistent conversation. F-3 expa
   Update `Conversation.changeset/2` to remove `unique_constraint(:session_id)`.
 
 - Update `Conversations.get_or_create/1` from Sprint 15: replace its semantics. Now it's `get_or_create_active/1` — find the most recent conversation for a session, or create one if none exist:
+
   ```elixir
   def get_or_create_active(session_id) do
     case list_conversations(session_id) do
@@ -180,9 +186,11 @@ Sprint 15 gives every browser session a single persistent conversation. F-3 expa
     end
   end
   ```
+
   Replace all call sites in `chat_live.ex`.
 
 - `chat_app/lib/chat_app_web/live/sidebar_component.ex` (new — Phoenix.Component, NOT a separate LiveView for v1):
+
   ```elixir
   defmodule ChatAppWeb.SidebarComponent do
     use Phoenix.Component
@@ -239,6 +247,7 @@ Sprint 15 gives every browser session a single persistent conversation. F-3 expa
   In `mount/3`: load `conversations: list_conversations(session_id)`. After every mutating event, re-fetch the list and re-assign.
 
 - `chat_app/assets/js/hooks/PromptOnEvent.js` (new): `phx-hook` that listens for a Phoenix server event and prompts the user for a string. Used by the rename flow:
+
   ```js
   const PromptOnEvent = {
     mounted() {
@@ -248,14 +257,16 @@ Sprint 15 gives every browser session a single persistent conversation. F-3 expa
           this.pushEvent("rename_conversation", { id, title: next.trim() });
         }
       });
-    }
+    },
   };
   ```
+
   Hook is attached to a hidden `<div phx-hook="PromptOnEvent" id="prompt-bridge" />` rendered once in the LiveView. The server's `rename_conversation_prompt` event pushes a `prompt_rename` JS event with the conversation's current title.
 
 - Update `assets/js/app.js` to register `PromptOnEvent` in the `Hooks` map.
 
 - Layout change: the existing `chat_live.ex` render currently wraps the chat in a single `<section>`. Restructure to:
+
   ```heex
   <div class="flex h-full">
     <ChatAppWeb.SidebarComponent.render conversations={@conversations} current_id={@current_conversation_id} />
@@ -278,17 +289,19 @@ Sprint 15 gives every browser session a single persistent conversation. F-3 expa
     - `"first user message auto-titles the conversation"`.
 
 **Acceptance Criteria:**
-- [ ] Sidebar renders the list of conversations for the current session.
-- [ ] "+ New conversation" creates a new conversation row and clears the chat.
-- [ ] Clicking a conversation in the sidebar switches the active conversation and loads its messages.
-- [ ] Hover-rename via `prompt()` updates the title in the DB and the sidebar.
-- [ ] Delete with confirm removes the conversation; if it was active, the LiveView switches to the next-most-recent or creates a fresh one.
-- [ ] First user message in a new conversation sets the title to the first 60 chars (trimmed).
-- [ ] Below 768px the sidebar is hidden behind a hamburger toggle (or behaves acceptably if mobile is deferred — document the choice).
-- [ ] All 5 new schema tests + 6 new LiveView tests pass.
-- [ ] Migration `20260501000000_allow_multiple_conversations_per_session` runs cleanly forward and back.
+
+- [x] Sidebar renders the list of conversations for the current session.
+- [x] "+ New conversation" creates a new conversation row and clears the chat.
+- [x] Clicking a conversation in the sidebar switches the active conversation and loads its messages.
+- [x] Hover-rename via `prompt()` updates the title in the DB and the sidebar.
+- [x] Delete with confirm removes the conversation; if it was active, the LiveView switches to the next-most-recent or creates a fresh one.
+- [x] First user message in a new conversation sets the title to the first 60 chars (trimmed).
+- [x] Below 768px the sidebar is hidden behind a hamburger toggle (or behaves acceptably if mobile is deferred — document the choice).
+- [x] All 5 new schema tests + 6 new LiveView tests pass.
+- [x] Migration `20260501000000_allow_multiple_conversations_per_session` runs cleanly forward and back.
 
 **Edge Cases to Handle:**
+
 - Sidebar empty after deleting the last conversation — auto-create a fresh one and switch to it.
 - Rename to empty string — `prompt()` returns empty; the hook ignores it.
 - Rename to a 1000-char title — truncate to 80 chars before persisting (add a `validate_length(:title, max: 80)` in the changeset).
@@ -296,6 +309,7 @@ Sprint 15 gives every browser session a single persistent conversation. F-3 expa
 - Session reset (cookie cleared) — new session_id, empty sidebar; the orphaned conversations remain in the DB but are unreachable. For v1 accept; cleanup is a follow-up admin task.
 
 **Do NOT do:**
+
 - Do NOT introduce a separate LiveView for the sidebar — keep it as a Phoenix.Component.
 - Do NOT add drag-to-reorder.
 - Do NOT add search across conversations — separate feature.
@@ -315,17 +329,20 @@ Sprint 11 made the OpenAI model configurable in `config/config.exs`, but the use
 **Exact Scope:**
 
 - Schema: extend `ChatApp.Conversations.Conversation` with new fields:
+
   ```elixir
   field :model, :string
   field :system_prompt, :string
   field :temperature, :float
   ```
+
   Add to `Conversation.changeset/2` `cast` list and validate:
   - `:model` in a known list (`["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini"]` — verify against current OpenAI offerings at sprint start; pin the list as a module attribute).
   - `:temperature` between 0.0 and 2.0 (`validate_number(:temperature, greater_than_or_equal_to: 0.0, less_than_or_equal_to: 2.0)`).
   - `:system_prompt` length ≤ 4000 chars.
 
 - Migration `20260508000000_add_settings_to_conversations.exs`:
+
   ```elixir
   alter table(:conversations) do
     add :model, :string
@@ -335,6 +352,7 @@ Sprint 11 made the OpenAI model configurable in `config/config.exs`, but the use
   ```
 
 - `chat_app/lib/chat_app/conversations.ex`: add `update_conversation_settings/2`:
+
   ```elixir
   def update_conversation_settings(id, attrs) do
     Repo.get!(Conversation, id)
@@ -344,6 +362,7 @@ Sprint 11 made the OpenAI model configurable in `config/config.exs`, but the use
   ```
 
 - `chat_app/lib/chat_app/openai.ex`: change the `body` construction to accept overrides:
+
   ```elixir
   def stream(messages, lv_pid, opts \\ []) do
     model = Keyword.get(opts, :model) || Application.get_env(:chat_app, :openai_model, "gpt-4o")
@@ -424,21 +443,24 @@ Sprint 11 made the OpenAI model configurable in `config/config.exs`, but the use
     - `"send_message uses the saved settings"` — by stubbing the OpenAI stream with `Req.Test` and asserting the body.
 
 **Acceptance Criteria:**
-- [ ] Conversation rows have nullable `model`, `system_prompt`, `temperature` columns.
-- [ ] Migration runs cleanly forward and back.
-- [ ] Settings drawer opens from the header rail.
-- [ ] Selecting a model + entering a system prompt + setting temperature persists to the conversation.
-- [ ] The next `send_message` includes the system prompt as `role: "system"` first message and the temperature in the request body.
-- [ ] Validation rejects out-of-range temperature, invalid model, oversize system prompt.
-- [ ] All 9 new tests pass.
+
+- [x] Conversation rows have nullable `model`, `system_prompt`, `temperature` columns.
+- [x] Migration runs cleanly forward and back.
+- [x] Settings drawer opens from the header rail.
+- [x] Selecting a model + entering a system prompt + setting temperature persists to the conversation.
+- [x] The next `send_message` includes the system prompt as `role: "system"` first message and the temperature in the request body.
+- [x] Validation rejects out-of-range temperature, invalid model, oversize system prompt.
+- [x] All 9 new tests pass.
 
 **Edge Cases to Handle:**
+
 - Settings empty (newly-created conversation) — the OpenAI body falls back to the global `:openai_model` config and omits `temperature` and `system_prompt`.
 - User changes the model mid-conversation — the next message uses the new model; prior messages don't replay.
 - System prompt with leading/trailing whitespace — trim before persisting.
 - Two tabs save settings simultaneously — last write wins; no PubSub for v1.
 
 **Do NOT do:**
+
 - Do NOT add `top_p`, `presence_penalty`, `frequency_penalty`, `max_tokens` controls — out of scope; add as a follow-up.
 - Do NOT add a "Reset to defaults" button (acceptable but defer).
 - Do NOT support per-message overrides.
@@ -457,6 +479,7 @@ Cheap polish, high perceived value. After persistence (Sprint 15), feedback even
 **Exact Scope:**
 
 - `chat_app/lib/chat_app_web/live/chat_live.ex` — inside the assistant `message_bubble` component (or its render function), append a hover-revealed action row:
+
   ```heex
   <div class="ui-chat-message-actions mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
     <button type="button"
@@ -470,17 +493,21 @@ Cheap polish, high perceived value. After persistence (Sprint 15), feedback even
       class="text-xs text-foreground/50 hover:text-foreground" aria-label="Thumbs down">▼</button>
   </div>
   ```
+
   Wrap the bubble in `class="group relative"` so `group-hover` works.
 
 - Add a JS hook for clipboard. There is no built-in `phx:copy`. Add `chat_app/assets/js/hooks/Clipboard.js`:
+
   ```js
   window.addEventListener("phx:copy", (e) => {
     navigator.clipboard.writeText(e.detail.text);
   });
   ```
+
   Import once in `assets/js/app.js`.
 
 - `chat_app/lib/chat_app_web/live/chat_live.ex`: add `handle_event("feedback", %{"message-index" => idx, "rating" => rating}, socket)`:
+
   ```elixir
   :telemetry.execute(
     [:chat_app, :feedback],
@@ -502,18 +529,21 @@ Cheap polish, high perceived value. After persistence (Sprint 15), feedback even
   - `chat_app/assets/test/hooks/Clipboard.test.js` (new): mock `navigator.clipboard.writeText`; dispatch `phx:copy` event with `{ text: "hello" }`; assert mock called with `"hello"`.
 
 **Acceptance Criteria:**
-- [ ] Assistant bubbles show ⎘ Copy / ▲ / ▼ on hover.
-- [ ] Clicking Copy writes the assistant message text to the clipboard.
-- [ ] Clicking ▲ or ▼ emits `[:chat_app, :feedback]` telemetry with `:rating` metadata.
-- [ ] No persistence of feedback in v1.
-- [ ] All 2 + 1 new tests pass.
+
+- [x] Assistant bubbles show ⎘ Copy / ▲ / ▼ on hover.
+- [x] Clicking Copy writes the assistant message text to the clipboard.
+- [x] Clicking ▲ or ▼ emits `[:chat_app, :feedback]` telemetry with `:rating` metadata.
+- [x] No persistence of feedback in v1.
+- [x] All 2 + 1 new tests pass.
 
 **Edge Cases to Handle:**
+
 - Browser without clipboard API (very old) — `navigator.clipboard` is undefined; fall back to `document.execCommand("copy")` via a temporary textarea. For v1 acceptable to skip the fallback; modern browsers all support it.
 - Copying mid-stream (during `is_sending`) — copies whatever is currently in `@message.content`. Acceptable.
 - Repeated thumbs clicks — each emits a telemetry event; v1 does not deduplicate.
 
 **Do NOT do:**
+
 - Do NOT persist feedback in this task. Add in a follow-up.
 - Do NOT add a "Copy as Markdown" button (audit lists it; defer).
 - Do NOT add inline edit / regenerate-from-this-message — separate feature.
@@ -531,6 +561,7 @@ Code snippets are a heavy use case in chat. Sprint 11 TASK 2 enabled `escape: tr
 **Exact Scope:**
 
 - `chat_app/lib/chat_app/markdown.ex`: extend `to_html/1` to post-process the Earmark output. Add a `Floki.parse_fragment/1` step that finds each `<pre><code class="...">` and wraps it in a `<div class="ui-code-block">` with a header bar:
+
   ```elixir
   def to_html(markdown) do
     {:ok, raw_html, _msgs} = Earmark.as_html(markdown, escape: true)
@@ -584,6 +615,7 @@ Code snippets are a heavy use case in chat. Sprint 11 TASK 2 enabled `escape: tr
   ```
 
 - `chat_app/assets/js/app.js`: add a delegated click handler:
+
   ```js
   document.addEventListener("click", (e) => {
     const btn = e.target.closest(".ui-code-block-copy");
@@ -596,6 +628,7 @@ Code snippets are a heavy use case in chat. Sprint 11 TASK 2 enabled `escape: tr
 - `chat_app/assets/css/chat.css`: add styling for `.ui-code-block`, `.ui-code-block-header`, `.ui-code-block-lang`, `.ui-code-block-copy`. Header bar visually distinct from the code body; uppercase language pill in a muted accent.
 
 - Verify `floki` is in `mix.exs` (it is, as a test dep). Move it to a non-test dep — change `{:floki, ...}` from `only: :test` to no scope:
+
   ```elixir
   {:floki, ">= 0.30.0"}
   ```
@@ -609,21 +642,24 @@ Code snippets are a heavy use case in chat. Sprint 11 TASK 2 enabled `escape: tr
   - Update the existing XSS / escape tests to be tolerant of the new wrapper structure (they test that `<script>` is escaped — wrapping doesn't undo escape).
 
 **Acceptance Criteria:**
-- [ ] Each fenced code block in assistant output renders inside `<div class="ui-code-block" data-language="...">` with a header bar.
-- [ ] The header shows the language (or "text" if absent).
-- [ ] Clicking the Copy button writes the un-escaped code to the clipboard.
-- [ ] XSS protection from Sprint 11 TASK 2 is preserved — script tags inside code fences remain HTML-escaped in the rendered output.
-- [ ] Inline code (single backtick) is NOT wrapped (renders as `<code>` only).
-- [ ] All 4 new tests pass.
-- [ ] `floki` is available in all envs.
+
+- [x] Each fenced code block in assistant output renders inside `<div class="ui-code-block" data-language="...">` with a header bar.
+- [x] The header shows the language (or "text" if absent).
+- [x] Clicking the Copy button writes the un-escaped code to the clipboard.
+- [x] XSS protection from Sprint 11 TASK 2 is preserved — script tags inside code fences remain HTML-escaped in the rendered output.
+- [x] Inline code (single backtick) is NOT wrapped (renders as `<code>` only).
+- [x] All 4 new tests pass.
+- [x] `floki` is available in all envs.
 
 **Edge Cases to Handle:**
+
 - A nested fenced block (Earmark doesn't support; out of scope).
 - A fence with a multi-class language (e.g. `class="elixir highlight-source"`) — take the first token.
 - A code block containing the literal substring `</textarea>` — already escaped by Earmark; the `data-copy-text` attribute is double-quote-safe (Floki `raw_html/1` handles attribute escaping).
 - A 1MB code block — `data-copy-text` attribute carries it; modern browsers handle multi-MB attributes fine. Acceptable.
 
 **Do NOT do:**
+
 - Do NOT add syntax highlighting (Makeup Elixir / Prism / highlight.js) in this task. Add as a follow-up.
 - Do NOT add line numbers.
 - Do NOT add a "Run code" button (way out of scope).
@@ -641,6 +677,7 @@ OpenAI's streaming responses include a final `usage` block when the request body
 **Exact Scope:**
 
 - Schema: add a new table `usage_records`:
+
   ```elixir
   create table(:usage_records) do
     add :conversation_id, references(:conversations, on_delete: :delete_all), null: false
@@ -655,6 +692,7 @@ OpenAI's streaming responses include a final `usage` block when the request body
 
   create index(:usage_records, [:conversation_id])
   ```
+
   Migration `20260515000000_create_usage_records.exs`.
 
 - `chat_app/lib/chat_app/conversations/usage_record.ex` (new): standard Ecto schema mirroring the table.
@@ -708,20 +746,23 @@ OpenAI's streaming responses include a final `usage` block when the request body
     - `"stream still works correctly when the usage block is missing"`.
 
 **Acceptance Criteria:**
-- [ ] `usage_records` table exists with the documented columns.
-- [ ] OpenAI request body includes `stream_options: {"include_usage": true}`.
-- [ ] When the API returns a usage block, a `usage_records` row is inserted.
-- [ ] The header displays the conversation's current cost.
-- [ ] All 7 new tests pass.
-- [ ] Migration up + down work cleanly.
+
+- [x] `usage_records` table exists with the documented columns.
+- [x] OpenAI request body includes `stream_options: {"include_usage": true}`.
+- [x] When the API returns a usage block, a `usage_records` row is inserted.
+- [x] The header displays the conversation's current cost.
+- [x] All 7 new tests pass.
+- [x] Migration up + down work cleanly.
 
 **Edge Cases to Handle:**
+
 - API returns no usage (older models, errors) — no insert; cost stays at the prior value.
 - Cost computation rounds to nearest cent; very-cheap conversations may show "$0.00" — acceptable.
 - Unknown model price: log a warning and store cost as 0. Document.
 - `record_usage` called with a stale message_id (deleted by Regenerate): handle the FK violation gracefully — wrap in `try/rescue Ecto.ConstraintError` and skip.
 
 **Do NOT do:**
+
 - Do NOT compute per-IP daily caps in this task — tied to F-2's IP-keyed plug, deferred.
 - Do NOT add a billing dashboard.
 - Do NOT add notifications when cost exceeds a threshold.
@@ -740,6 +781,7 @@ OpenAI streaming connections occasionally drop mid-stream. Today the LiveView su
 **Exact Scope:**
 
 - `chat_app/lib/chat_app/openai.ex`: add an internal retry loop:
+
   ```elixir
   @max_retries 2
 
@@ -774,6 +816,7 @@ OpenAI streaming connections occasionally drop mid-stream. Today the LiveView su
     #   {:fatal, reason} for 4xx and exceptions
   end
   ```
+
   - **Retryable**: `{:error, %Mint.TransportError{}}`, `{:error, %Req.TransportError{}}`, `{:error, :timeout}`, `{:error, :closed}`, status `5xx`.
   - **Fatal**: status `4xx`, any exception inside the rescue block, status `200` followed by `:stream_done` (success path returns `:ok` instead).
 
@@ -784,6 +827,7 @@ OpenAI streaming connections occasionally drop mid-stream. Today the LiveView su
   Choose strategy 1 for v1 — cleaner UX, no "duplicate prefix" artifacts. The LiveView resets the assistant message; the user sees a brief blank then the full reply.
 
 - `chat_app/lib/chat_app_web/live/chat_live.ex`: add `handle_info({:stream_retrying, attempt}, socket)`:
+
   ```elixir
   if assistant_id = socket.assigns.assistant_message_id do
     Conversations.delete_message(assistant_id)
@@ -797,6 +841,7 @@ OpenAI streaming connections occasionally drop mid-stream. Today the LiveView su
      errors: socket.assigns.errors ++ [%{for_index: -1, reason: "Reconnecting (attempt #{attempt + 1}/2)..."}]
    )}
   ```
+
   Add helper `defp drop_last_assistant(messages) do ... end`.
 
 - Tests (`chat_app/test/chat_app/openai_retry_test.exs`, new):
@@ -812,22 +857,25 @@ OpenAI streaming connections occasionally drop mid-stream. Today the LiveView su
   - `":stream_retrying inserts a transient error message"`.
 
 **Acceptance Criteria:**
-- [ ] `OpenAI.stream/3` retries transport-level failures up to 2 times with exponential backoff (250ms, 500ms, 1000ms).
-- [ ] 4xx responses do NOT retry; `:stream_error` is sent immediately.
-- [ ] 5xx responses retry.
-- [ ] On retry, the LiveView clears the partial assistant message and DB row.
-- [ ] After exhausting retries, the LiveView falls back to the existing error UX from Sprint 12 TASK 2.
-- [ ] Logger entries are emitted for each retry attempt.
-- [ ] All 6 + 2 new tests pass.
-- [ ] `mix precommit` exits 0.
+
+- [x] `OpenAI.stream/3` retries transport-level failures up to 2 times with exponential backoff (250ms, 500ms, 1000ms).
+- [x] 4xx responses do NOT retry; `:stream_error` is sent immediately.
+- [x] 5xx responses retry.
+- [x] On retry, the LiveView clears the partial assistant message and DB row.
+- [x] After exhausting retries, the LiveView falls back to the existing error UX from Sprint 12 TASK 2.
+- [x] Logger entries are emitted for each retry attempt.
+- [x] All 6 + 2 new tests pass.
+- [x] `mix precommit` exits 0.
 
 **Edge Cases to Handle:**
+
 - Retry triggers while user has already sent the next message (rare; the rate limit and `is_sending` guard prevent it). For absolute correctness, `:stream_retrying` checks `socket.assigns.is_sending` before mutating.
 - Retry triggers AFTER user clicks Stop — the retry loop checks for a process-cancellation flag. For v1 simplicity: the retry loop continues; the LiveView's `terminate/2` from Sprint 12 TASK 1 kills the supervised task on disconnect, breaking the retry. Acceptable.
 - Backoff exceeds the LiveView's tolerance for a frozen UI — 250+500+1000 = 1.75s max blocking before fatal. Acceptable.
 - DB row already deleted by a parallel Stop event — `delete_message/1` raises; wrap in `try`. The existing `Conversations.delete_message/1` from Sprint 15 TASK 4 raises on missing — adjust to use `Repo.delete/1` with the unwrapped result, returning `{:ok, _} | {:error, _}`.
 
 **Do NOT do:**
+
 - Do NOT retry on 429 (rate limit) — the user must back off; surface immediately.
 - Do NOT retry on 401/403 — credential issues.
 - Do NOT exceed 2 retries for v1.
@@ -865,6 +913,7 @@ After this sprint, the audit's backlog is fully addressed. Items NOT covered any
 - **Telemetry-only feedback** (TASK 3) **is observable nowhere**: until Sprint 17+ adds a feedback table, ▲/▼ clicks are visible only in logs. Document.
 
 ## DEFINITION OF DONE — SPRINT COMPLETE WHEN:
+
 - [ ] All six tasks pass their acceptance criteria.
 - [ ] `mix precommit` exits 0.
 - [ ] `cd assets && npm test` exits 0.
@@ -878,7 +927,9 @@ After this sprint, the audit's backlog is fully addressed. Items NOT covered any
 ---
 
 ## QA Verdict
+
 TBD
 
 ## Completion Notes
+
 TBD

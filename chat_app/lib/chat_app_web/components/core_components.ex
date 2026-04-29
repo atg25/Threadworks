@@ -49,7 +49,7 @@ defmodule ChatAppWeb.CoreComponents do
         @kind == :info &&
           "border-accent-interactive/25 border-l-[color:var(--accent-interactive)] bg-surface/95 text-foreground",
         @kind == :error &&
-          "border-[color:var(--status-error)]/35 border-l-[color:var(--status-error)] bg-[color:var(--status-error)]/8 text-foreground"
+          "border-[color:var(--status-error)] border-opacity-35 border-l-[color:var(--status-error)] bg-[color:var(--status-error)] bg-opacity-10 text-foreground"
       ]}>
         <.icon
           :if={@kind == :info}
@@ -97,10 +97,11 @@ defmodule ChatAppWeb.CoreComponents do
   """
   attr :name, :string, required: true
   attr :class, :any, default: "size-4"
+  attr :rest, :global
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
-    <span class={[@name, @class]} />
+    <span class={[@name, @class]} {@rest} />
     """
   end
 

@@ -7,7 +7,10 @@ defmodule ChatApp.Application do
 
   @impl true
   def start(_type, _args) do
+    Code.ensure_loaded(ChatApp.OpenAI)
+
     children = [
+      ChatApp.Repo,
       ChatAppWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:chat_app, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: ChatApp.PubSub},

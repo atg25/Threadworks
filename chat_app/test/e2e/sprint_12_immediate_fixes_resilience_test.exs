@@ -6,7 +6,7 @@ defmodule ChatAppWeb.Sprint12ImmediateFixesResilienceE2ETest do
   defmodule SlowStreamStub do
     @moduledoc false
 
-    def stream(_messages, pid) do
+    def stream(_messages, pid, _opts \\ []) do
       owner = Application.get_env(:chat_app, :sp12_e2e_owner)
       send(owner, {:sp12_e2e_stream_pid, self()})
 
@@ -46,7 +46,9 @@ defmodule ChatAppWeb.Sprint12ImmediateFixesResilienceE2ETest do
   feature "Negative — burst of 25 messages stops at 20 with a flash", %{session: session} do
     session =
       Enum.reduce(1..25, visit(session, "/"), fn i, s ->
-        type_and_submit(s, "burst-#{i}")
+        s
+        |> type_and_submit("burst-#{i}")
+        |> assert_has(css("[data-role='assistant']", minimum: min(i, 20)))
       end)
 
     session

@@ -57,29 +57,91 @@ defmodule ChatAppWeb.ChatLiveTest do
     assert html =~ "data-chat-bottom-rail"
   end
 
-  test "root layout html element has height:100% style", %{conn: conn} do
+  test "root layout html element has min-height:100% style", %{conn: conn} do
     {:ok, _view, html} = live(conn, "/")
-    assert html =~ ~r/html[^>]+style=[^>]*height:\s*100%/
+    assert html =~ ~r/html[^>]+style=[^>]*min-height:\s*100%/
   end
 
-  test "root layout body element has height:100% style", %{conn: conn} do
+  test "root layout body element has min-height:100% style", %{conn: conn} do
     {:ok, _view, html} = live(conn, "/")
-    assert html =~ ~r/body[^>]+style=[^>]*height:\s*100%/
+    assert html =~ ~r/body[^>]+style=[^>]*min-height:\s*100%/
   end
 
-  test "body has overflow:hidden style", %{conn: conn} do
+  test "body only constrains horizontal overflow", %{conn: conn} do
     {:ok, _view, html} = live(conn, "/")
-    assert html =~ ~r/body[^>]+style=[^>]*overflow:\s*hidden/
+    assert html =~ ~r/body[^>]+style=[^>]*overflow-x:\s*hidden/
   end
 
-  test "page does not contain a scrollable body (overflow is hidden)", %{conn: conn} do
+  test "body no longer forces overflow hidden on both axes", %{conn: conn} do
     {:ok, _view, html} = live(conn, "/")
-    refute html =~ ~r/body[^>]+style=[^>]*overflow:\s*(auto|scroll)/
+    refute html =~ ~r/body[^>]+style=[^>]*overflow:\s*hidden/
   end
 
   test "section does not use flex-col alone (must be grid)", %{conn: conn} do
     {:ok, _view, html} = live(conn, "/")
     assert html =~ ~r/class="[^"]*\bgrid\b[^"]*"/
+  end
+
+  describe "theme toggle" do
+    test "header rail contains four named theme buttons", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/")
+
+      {:ok, doc} = Floki.parse_document(html)
+      buttons = Floki.find(doc, "[data-phx-theme]")
+
+      assert length(buttons) == 4
+    end
+
+    test "each theme button has a non-empty aria-label", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/")
+
+      {:ok, doc} = Floki.parse_document(html)
+      buttons = Floki.find(doc, "[data-phx-theme]")
+
+      assert Enum.all?(buttons, fn button ->
+               button
+               |> Floki.attribute("aria-label")
+               |> Enum.any?(&(String.trim(&1) != ""))
+             end)
+    end
+
+    test "theme buttons wire phx:set-theme dispatch", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/")
+      assert length(Regex.scan(~r/phx:set-theme/, html)) >= 4
+    end
+
+    test "header pills for new conversation and settings are absent", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/")
+
+      refute html =~ ~r/phx-click="new_conversation_header"/
+      refute html =~ ~r/phx-click="toggle_settings"[^>]*>\s*Settings\s*<\/button>/
+    end
+
+    test "brand monogram starts a new conversation", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/")
+
+      assert html =~ ~r/phx-click="new_conversation"/
+      assert html =~ ~r/aria-label="Start a new conversation"/
+      assert html =~ ~r/title="New conversation"/
+      assert html =~ ~r/data-new-chat-trigger="true"/
+    end
+
+    test "usage cost badge is not rendered above chat", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/")
+
+      refute html =~ "data-usage-cost"
+    end
+
+    test "footer includes author, project summary, and profile links", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/")
+
+      assert has_element?(view, "footer[data-site-footer]")
+      assert render(view) =~ "About Andrew"
+      assert render(view) =~ "About The Project"
+      assert has_element?(view, ~s(footer[data-site-footer] a[href="https://linkedin.com/in/andrew-gardner2026/"]))
+      assert has_element?(view, ~s(footer[data-site-footer] a[href="https://github.com/atg25"]))
+      assert has_element?(view, ~s(footer[data-site-footer] a[href="https://andrewg.vercel.app/"]))
+    end
   end
 
   describe "hero intro component" do
@@ -135,6 +197,23 @@ defmodule ChatAppWeb.ChatLiveTest do
     test "hero wrapper has animate-in class", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/")
       assert html =~ "animate-in"
+    end
+
+    test "new conversation bumps landing state for hero animation", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/")
+
+      initial_html = render(view)
+      assert initial_html =~ ~s(id="hero-landing-0")
+      assert initial_html =~ ~s(data-new-chat-landing="false")
+      assert initial_html =~ "duration-700"
+
+      view |> element("button[data-new-chat-trigger='true']") |> render_click()
+
+      html = render(view)
+      assert html =~ ~s(id="hero-landing-1")
+      assert html =~ ~s(data-new-chat-landing="true")
+      assert html =~ "duration-1000"
+      assert html =~ "slide-in-from-top-12"
     end
 
     test "hero wrapper has fade-in class", %{conn: conn} do

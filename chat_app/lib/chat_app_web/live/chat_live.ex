@@ -4,10 +4,9 @@ defmodule ChatAppWeb.ChatLive do
   is_sending flag, streamed assistant buffer, message list, and per-session
   rate-limit key.
 
-  Uses `Phoenix.LiveView` directly (not `ChatAppWeb, :live_view`) so we can
-  pass `container: {:div, style: "height: 100%;"}` - the wrapping div must
-  carry `height: 100%` to propagate the body's height down to the inner
-  `<section>`; without it, `h-full` on the section resolves to 0.
+  Uses `Phoenix.LiveView` directly (not `ChatAppWeb, :live_view`) so the
+  top-level shell can fill the viewport while the overall page remains
+  vertically scrollable.
 
   The streaming task is supervised under `ChatApp.TaskSupervisor` and its
   pid is held in `assigns.stream_task_pid` so `terminate/2` can kill it on
@@ -15,7 +14,7 @@ defmodule ChatAppWeb.ChatLive do
   """
 
   use Phoenix.LiveView,
-    container: {:div, style: "height: 100%;"}
+    container: {:div, style: "min-height: 100%;"}
 
   # Helpers equivalent to ChatAppWeb, :live_view
   use Gettext, backend: ChatAppWeb.Gettext
@@ -26,11 +25,14 @@ defmodule ChatAppWeb.ChatLive do
     router: ChatAppWeb.Router,
     statics: ChatAppWeb.static_paths()
 
-  alias ChatApp.Chat
+  alias Phoenix.LiveView.JS
+  alias ChatApp.Conversations
   alias ChatApp.Markdown
+  alias ChatAppWeb.SidebarComponent
+  import ChatAppWeb.CoreComponents, only: [icon: 1]
 
   @impl true
-  def mount(params, _session, socket) do
+  def mount(params, session, socket) do
     # Keep URL-driven hero toggles out of production — gated by an app-env flag
     # so this call is safe at runtime (no Mix module dependency in a release).
     hero_state =
@@ -40,55 +42,102 @@ defmodule ChatAppWeb.ChatLive do
         true
       end
 
-    session_id =
-      if connected?(socket) do
-        :crypto.strong_rand_bytes(16) |> Base.encode16()
-      else
-        nil
-      end
+    session_id = derive_session_id(socket, session)
 
-    {:ok,
-     assign(socket,
-       messages: [],
-       errors: [],
-       input: "",
-       is_sending: false,
-       stream_buffer: "",
-       stream_task_pid: nil,
-       session_id: session_id,
-       rate_limit_error: nil,
-       at_bottom: true,
-       hero_state: hero_state
-     )}
+    socket =
+      assign(socket,
+        messages: [],
+        errors: [],
+        input: "",
+        is_sending: false,
+        stream_buffer: "",
+        stream_task_pid: nil,
+        session_id: session_id,
+        conversation_id: nil,
+        current_conversation_id: nil,
+        current_conversation: nil,
+        conversations: [],
+        sidebar_open: false,
+        usage_totals: %{total_tokens: 0, total_cost_cents: 0},
+        settings_open: false,
+        settings_saved: false,
+        settings_error: nil,
+        assistant_message_id: nil,
+        persist_dirty: false,
+        persist_token_count: 0,
+        persist_timer_ref: nil,
+        rate_limit_error: nil,
+        at_bottom: true,
+        hero_state: hero_state,
+        new_chat_nonce: 0
+      )
+
+    if connected?(socket) do
+      conversation = Conversations.get_or_create_active(session_id)
+      conversations = Conversations.list_conversations(session_id)
+
+      messages =
+        conversation.id
+        |> Conversations.list_messages()
+        |> Enum.map(&%{id: &1.id, role: &1.role, content: &1.content})
+
+      {:ok,
+       assign(socket,
+         session_id: session_id,
+         conversation_id: conversation.id,
+         current_conversation_id: conversation.id,
+         current_conversation: conversation,
+         conversations: conversations,
+         usage_totals: Conversations.usage_for_conversation(conversation.id),
+         messages: messages,
+         hero_state: socket.assigns.hero_state && messages == []
+       )}
+    else
+      {:ok, socket}
+    end
   end
 
   @impl true
   def handle_event("send_message", %{"input" => text}, socket) do
     socket = ensure_session_id(socket)
+    socket = ensure_conversation(socket)
 
-    case check_rate_limit(socket) do
-      {:rate_limited, limited_socket} ->
-        {:noreply, limited_socket}
+    socket =
+      socket
+      |> maybe_recover_stale_send()
+      |> assign(rate_limit_error: nil)
 
-      :ok ->
-        text = String.trim(text)
+    text = String.trim(text)
 
-        socket =
-          socket
-          |> maybe_recover_stale_send()
-          |> assign(rate_limit_error: nil)
+    if text == "" || socket.assigns.is_sending do
+      {:noreply, socket}
+    else
+      case check_rate_limit(socket) do
+        {:rate_limited, limited_socket} ->
+          {:noreply, limited_socket}
 
-        if text == "" || socket.assigns.is_sending do
-          {:noreply, socket}
-        else
-          user_msg = %{role: :user, content: text}
+        :ok ->
+          first_message? = Conversations.list_messages(socket.assigns.conversation_id) == []
+
+          {:ok, user_row} =
+            Conversations.append_message(socket.assigns.conversation_id, :user, text)
+
+          if first_message? do
+            Conversations.rename_conversation(
+              socket.assigns.conversation_id,
+              Conversations.auto_title_from_first_message(text)
+            )
+          end
+
+          user_msg = %{id: user_row.id, role: :user, content: text}
           messages = socket.assigns.messages ++ [user_msg]
+          llm_messages = Enum.map(messages, &Map.take(&1, [:role, :content]))
           pid = self()
 
           {:ok, task_pid} =
             Task.Supervisor.start_child(ChatApp.TaskSupervisor, fn ->
               try do
-                openai_module().stream(messages, pid)
+                openai_module().stream(llm_messages, pid, openai_stream_opts(socket))
               rescue
                 e -> send(pid, {:stream_error, Exception.message(e)})
               end
@@ -101,16 +150,248 @@ defmodule ChatAppWeb.ChatLive do
              is_sending: true,
              stream_buffer: "",
              stream_task_pid: task_pid,
+             assistant_message_id: nil,
+             persist_dirty: false,
+             persist_token_count: 0,
+             persist_timer_ref: nil,
+             settings_saved: false,
+             conversations: Conversations.list_conversations(socket.assigns.session_id),
              hero_state: false,
              at_bottom: true
            )}
+      end
+    end
+  end
+
+  @impl true
+  def handle_event("new_conversation", _params, socket) do
+    socket = cancel_stream(socket)
+    conversation = Conversations.create_conversation(socket.assigns.session_id, %{})
+
+    {:noreply,
+     assign(socket,
+       conversations: Conversations.list_conversations(socket.assigns.session_id),
+       current_conversation: conversation,
+       usage_totals: Conversations.usage_for_conversation(conversation.id),
+       messages: [],
+       errors: [],
+       input: "",
+       conversation_id: conversation.id,
+       current_conversation_id: conversation.id,
+       assistant_message_id: nil,
+       persist_dirty: false,
+       persist_token_count: 0,
+       persist_timer_ref: nil,
+       rate_limit_error: nil,
+       settings_open: false,
+       settings_saved: false,
+       settings_error: nil,
+       at_bottom: true,
+       hero_state: true,
+       new_chat_nonce: socket.assigns.new_chat_nonce + 1
+     )}
+  end
+
+  @impl true
+  def handle_event("new_conversation_header", params, socket) do
+    handle_event("new_conversation", params, socket)
+  end
+
+  @impl true
+  def handle_event("switch_conversation", %{"id" => id}, socket) do
+    with {:ok, conversation} <- conversation_for_session(socket, id) do
+      socket = cancel_stream(socket)
+
+      messages =
+        Conversations.list_messages(conversation.id)
+        |> Enum.map(&%{id: &1.id, role: &1.role, content: &1.content})
+
+      {:noreply,
+       assign(socket,
+         conversation_id: conversation.id,
+         current_conversation_id: conversation.id,
+         current_conversation: conversation,
+         conversations: Conversations.list_conversations(socket.assigns.session_id),
+         usage_totals: Conversations.usage_for_conversation(conversation.id),
+         messages: messages,
+         settings_saved: false,
+         settings_error: nil,
+         errors: [],
+         hero_state: messages == []
+       )}
+    else
+      :error -> {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle_settings", _params, socket) do
+    {:noreply,
+     assign(socket,
+       settings_open: !socket.assigns.settings_open,
+       settings_error: nil,
+       settings_saved: false
+     )}
+  end
+
+  @impl true
+  def handle_event("toggle_sidebar", _params, socket) do
+    {:noreply, assign(socket, sidebar_open: !socket.assigns.sidebar_open)}
+  end
+
+  @impl true
+  def handle_event("close_sidebar", _params, socket) do
+    {:noreply, assign(socket, sidebar_open: false)}
+  end
+
+  @impl true
+  def handle_event("save_settings", %{"settings" => settings_params}, socket) do
+    socket = ensure_conversation(socket)
+
+    attrs = %{
+      model: Map.get(settings_params, "model"),
+      system_prompt: Map.get(settings_params, "system_prompt"),
+      temperature: Map.get(settings_params, "temperature")
+    }
+
+    case Conversations.update_conversation_settings(socket.assigns.conversation_id, attrs) do
+      {:ok, conversation} ->
+        {:noreply,
+         assign(socket,
+           current_conversation: conversation,
+           settings_open: false,
+           settings_saved: true,
+           settings_error: nil,
+           conversations: Conversations.list_conversations(socket.assigns.session_id)
+         )}
+
+      {:error, changeset} ->
+        {:noreply,
+         assign(socket,
+           settings_open: true,
+           settings_saved: false,
+           settings_error: settings_error_message(changeset)
+         )}
+    end
+  end
+
+  @impl true
+  def handle_event("rename_conversation_prompt", %{"id" => id}, socket) do
+    with {:ok, conversation} <- conversation_for_session(socket, id) do
+      {:noreply,
+       push_event(socket, "prompt_rename", %{
+         id: conversation.id,
+         current: conversation.title || ""
+       })}
+    else
+      :error -> {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("rename_conversation", %{"id" => id, "title" => title}, socket) do
+    with {:ok, conversation} <- conversation_for_session(socket, id) do
+      Conversations.rename_conversation(conversation.id, title)
+
+      {:noreply,
+       assign(socket, conversations: Conversations.list_conversations(socket.assigns.session_id))}
+    else
+      :error -> {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("delete_conversation", %{"id" => id}, socket) do
+    with {:ok, conversation} <- conversation_for_session(socket, id) do
+      socket = cancel_stream(socket)
+      _ = Conversations.delete_conversation(conversation.id)
+
+      conversations = Conversations.list_conversations(socket.assigns.session_id)
+
+      active =
+        case conversations do
+          [latest | _] -> latest
+          [] -> Conversations.create_conversation(socket.assigns.session_id, %{})
+        end
+
+      messages =
+        Conversations.list_messages(active.id)
+        |> Enum.map(&%{id: &1.id, role: &1.role, content: &1.content})
+
+      {:noreply,
+       assign(socket,
+         conversation_id: active.id,
+         current_conversation_id: active.id,
+         current_conversation: active,
+         conversations: Conversations.list_conversations(socket.assigns.session_id),
+         usage_totals: Conversations.usage_for_conversation(active.id),
+         messages: messages,
+         settings_saved: false,
+         settings_error: nil,
+         hero_state: messages == []
+       )}
+    else
+      :error -> {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("stop_generation", _params, socket) do
+    {:noreply, cancel_stream(socket)}
+  end
+
+  @impl true
+  def handle_event("regenerate", _params, socket) do
+    cond do
+      socket.assigns.is_sending ->
+        {:noreply, socket}
+
+      true ->
+        case List.last(socket.assigns.messages) do
+          %{role: :assistant} = last_assistant ->
+            case check_rate_limit(socket) do
+              {:rate_limited, limited_socket} ->
+                {:noreply, limited_socket}
+
+              :ok ->
+                trimmed_messages = List.delete_at(socket.assigns.messages, -1)
+
+                if is_integer(last_assistant[:id]) do
+                  Conversations.delete_message(last_assistant.id)
+                end
+
+                case List.last(Enum.filter(trimmed_messages, &(&1.role == :user))) do
+                  nil ->
+                    {:noreply, assign(socket, messages: trimmed_messages)}
+
+                  _last_user ->
+                    llm_messages = Enum.map(trimmed_messages, &Map.take(&1, [:role, :content]))
+                    Process.send_after(self(), {:start_regenerate, llm_messages}, 50)
+
+                    {:noreply,
+                     assign(socket,
+                       messages: trimmed_messages,
+                       is_sending: true,
+                       stream_buffer: "",
+                       stream_task_pid: nil,
+                       assistant_message_id: nil,
+                       persist_dirty: false,
+                       persist_token_count: 0,
+                       persist_timer_ref: nil,
+                       rate_limit_error: nil
+                     )}
+                end
+            end
+
+          _ ->
+            {:noreply, socket}
         end
     end
   end
 
   @impl true
-  def handle_event("update_input", %{"input" => value}, socket) do
-    {:noreply, assign(socket, input: value)}
+  def handle_event("update_input", params, socket) do
+    {:noreply, assign(socket, input: params["input"] || "")}
   end
 
   @impl true
@@ -122,23 +403,174 @@ defmodule ChatAppWeb.ChatLive do
 
   @impl true
   def handle_info({:stream_token, token}, socket) do
-    buffer = socket.assigns.stream_buffer <> token
-    messages = Chat.upsert_assistant_message(socket.assigns.messages, buffer)
-    {:noreply, assign(socket, messages: messages, stream_buffer: buffer)}
+    if socket.assigns.is_sending == false do
+      {:noreply, socket}
+    else
+      socket = ensure_conversation(socket)
+      {assistant_id, messages} = ensure_assistant_row(socket, socket.assigns.stream_buffer)
+
+      buffer = socket.assigns.stream_buffer <> token
+      messages = upsert_assistant_message(messages, assistant_id, buffer)
+
+      socket =
+        socket
+        |> assign(messages: messages, stream_buffer: buffer, assistant_message_id: assistant_id)
+        |> schedule_persist_timer()
+        |> bump_persist_token_count()
+        |> maybe_persist_by_token_threshold()
+
+      {:noreply, socket}
+    end
   end
 
   @impl true
-  def handle_info(:stream_done, socket) do
-    socket = ensure_socket_changed(socket)
-    messages = maybe_drop_empty_assistant(socket.assigns.messages, socket.assigns.stream_buffer)
+  def handle_info({:stream_usage, usage}, socket) do
+    socket = ensure_conversation(socket)
+
+    if is_integer(socket.assigns.assistant_message_id) do
+      _ =
+        Conversations.record_usage(
+          socket.assigns.conversation_id,
+          socket.assigns.assistant_message_id,
+          Conversations.settings_model_or_default(socket.assigns.current_conversation),
+          usage
+        )
+    end
+
+    {:noreply,
+     assign(socket,
+       usage_totals: Conversations.usage_for_conversation(socket.assigns.conversation_id)
+     )}
+  end
+
+  @impl true
+  def handle_info({:stream_retrying, _attempt}, socket) do
+    if is_integer(socket.assigns.assistant_message_id) do
+      _ = Conversations.delete_message(socket.assigns.assistant_message_id)
+    end
+
+    messages = drop_last_assistant(socket.assigns.messages)
+
+    errors =
+      append_error(socket.assigns.errors, %{
+        for_index: max(length(messages) - 1, 0),
+        reason: "retry"
+      })
 
     {:noreply,
      assign(socket,
        messages: messages,
+       errors: errors,
+       stream_buffer: "",
+       assistant_message_id: nil,
+       persist_dirty: false,
+       persist_token_count: 0,
+       persist_timer_ref: nil
+     )}
+  end
+
+  @impl true
+  def handle_info(:stream_done, socket) do
+    if socket.assigns.is_sending == false and socket.assigns.stream_task_pid == nil and
+         socket.assigns.stream_buffer == "" do
+      {:noreply, socket}
+    else
+      socket = ensure_socket_changed(socket)
+      buffer = socket.assigns.stream_buffer
+
+      {assistant_id, messages} =
+        if is_integer(socket.assigns.assistant_message_id) or buffer != "" do
+          {id, list} = ensure_assistant_row(socket, buffer)
+          {id, upsert_assistant_message(list, id, buffer)}
+        else
+          socket = ensure_conversation(socket)
+
+          {:ok, row} =
+            Conversations.append_message(socket.assigns.conversation_id, :assistant, "")
+
+          {row.id, socket.assigns.messages}
+        end
+
+      if is_integer(assistant_id) do
+        Conversations.update_assistant_message(assistant_id, buffer)
+      end
+
+      render_messages =
+        if buffer == "" do
+          case List.last(messages) do
+            %{role: :assistant, content: ""} -> List.delete_at(messages, -1)
+            _ -> messages
+          end
+        else
+          messages
+        end
+
+      {:noreply,
+       assign(socket,
+         messages: render_messages,
+         is_sending: false,
+         stream_buffer: "",
+         stream_task_pid: nil,
+         assistant_message_id: nil,
+         persist_dirty: false,
+         persist_token_count: 0,
+         persist_timer_ref: nil
+       )}
+    end
+  end
+
+  @impl true
+  def handle_info(:persist_assistant_buffer, socket) do
+    socket = assign(socket, persist_timer_ref: nil)
+
+    socket =
+      if socket.assigns.is_sending && socket.assigns.persist_dirty &&
+           is_integer(socket.assigns.assistant_message_id) do
+        Conversations.update_assistant_message(
+          socket.assigns.assistant_message_id,
+          socket.assigns.stream_buffer
+        )
+
+        assign(socket, persist_dirty: false)
+      else
+        socket
+      end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:stream_stopped}, socket) do
+    {:noreply,
+     assign(socket,
        is_sending: false,
        stream_buffer: "",
-       stream_task_pid: nil
+       stream_task_pid: nil,
+       assistant_message_id: nil,
+       persist_dirty: false,
+       persist_token_count: 0,
+       persist_timer_ref: nil
      )}
+  end
+
+  @impl true
+  def handle_info({:start_regenerate, llm_messages}, socket) do
+    if socket.assigns.is_sending and socket.assigns.stream_task_pid == nil do
+      pid = self()
+
+      {:ok, task_pid} =
+        Task.Supervisor.start_child(ChatApp.TaskSupervisor, fn ->
+          try do
+            openai_module().stream(llm_messages, pid, openai_stream_opts(socket))
+          rescue
+            e -> send(pid, {:stream_error, Exception.message(e)})
+          end
+        end)
+
+      {:noreply, assign(socket, stream_task_pid: task_pid)}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true
@@ -171,198 +603,586 @@ defmodule ChatAppWeb.ChatLive do
     end
   end
 
+  defp display_stream_error_reason(reason) when reason in [nil, ""] do
+    "Unknown error"
+  end
+
+  defp display_stream_error_reason("retry") do
+    "Retrying…"
+  end
+
+  defp display_stream_error_reason(reason) when is_binary(reason) do
+    case reason do
+      "HTTP 401" -> "HTTP 401 — OpenAI key missing/invalid (set OPENAI_API_KEY)"
+      "HTTP 403" -> "HTTP 403 — OpenAI access forbidden"
+      "HTTP 429" -> "HTTP 429 — OpenAI rate limited"
+      "HTTP 500" -> "HTTP 500 — OpenAI server error"
+      "HTTP 502" -> "HTTP 502 — OpenAI upstream error"
+      "HTTP 503" -> "HTTP 503 — OpenAI temporarily unavailable"
+      "HTTP 504" -> "HTTP 504 — OpenAI gateway timeout"
+      other -> other
+    end
+  end
+
+  defp display_stream_error_reason(reason), do: to_string(reason)
+
   @impl true
   def render(assigns) do
     ~H"""
-    <section
-      data-chat-surface="true"
-      data-chat-surface-mode="embedded"
-      class="relative grid h-full min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] bg-background"
-    >
-      <header
-        class="ui-chat-header-surface relative z-20 flex shrink-0 items-center justify-between gap-[var(--space-3)] border-b border-[var(--border-color)] px-[var(--space-6)] py-[var(--space-3)]"
-        data-chat-surface-header="true"
-        data-chat-surface-header-mode="embedded"
-      >
-        <div class="flex min-w-0 items-center gap-[var(--space-4)]">
-          <span class="brand-mark" aria-hidden="true">CA</span>
-          <div class="flex min-w-0 flex-col gap-1.5">
-            <p class="brand-wordmark truncate">
-              Chat<em>App</em>
-            </p>
-            <span class="brand-status-pill">Chat</span>
-          </div>
-        </div>
-      </header>
-
-      <div
-        class="relative flex h-full min-h-0 w-full flex-col overflow-hidden"
-        data-chat-message-region="true"
-      >
-        <div
-          class={[
-            "ui-chat-viewport-glow pointer-events-none absolute inset-x-0 top-0",
-            if(@hero_state, do: "h-24 opacity-45", else: "h-32 opacity-70")
-          ]}
-          aria-hidden="true"
-        />
-
-        <div
-          id="chat-viewport"
-          class="ui-chat-transcript-plane ui-chat-transcript-frame z-10 flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain"
-          data-chat-message-viewport="true"
-          data-chat-transcript-mode="embedded"
-          phx-hook="ChatScroll"
-        >
-          <div
-            class={[
-              "ui-chat-message-stack shrink-0 mx-auto w-full max-w-[var(--chat-content-width)] flex min-h-full flex-col",
-              if(@hero_state, do: "justify-center", else: "justify-end")
-            ]}
-            data-chat-message-stack="true"
-            data-message-list-state={if @hero_state, do: "hero", else: "conversation"}
-            data-message-list-mode="embedded"
-          >
-            <%= if @hero_state do %>
-              <.hero_intro />
-            <% else %>
-              <%= for msg <- @messages do %>
-                <.message_bubble message={msg} />
-              <% end %>
-              <%= for err <- @errors do %>
-                <div
-                  class="ui-chat-message-error mx-auto max-w-[80%] rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-700"
-                  data-chat-message-error="true"
-                  data-role="assistant"
-                >
-                  Error: <%= err.reason %>
-                </div>
-              <% end %>
-
-              <%= if @is_sending && @stream_buffer == "" do %>
-                <div
-                  class="ui-chat-message-assistant rounded-[1.4rem] px-[var(--space-4)] py-[var(--space-3)] text-sm"
-                  data-chat-message-role="assistant"
-                >
-                  <span class="inline-flex items-center gap-1.5" aria-label="Assistant is responding">
-                    <span
-                      class="size-2 rounded-full bg-accent-interactive animate-pulse"
-                      style="animation-delay: 0ms"
-                    />
-                    <span
-                      class="size-2 rounded-full bg-accent-interactive animate-pulse"
-                      style="animation-delay: 180ms"
-                    />
-                    <span
-                      class="size-2 rounded-full bg-accent-interactive animate-pulse"
-                      style="animation-delay: 360ms"
-                    />
-                  </span>
-                </div>
-              <% end %>
-            <% end %>
-          </div>
-        </div>
-
-        <div
-          id="scroll-cta-dock"
-          class="ui-chat-scroll-cta-dock absolute left-0 right-0 z-10 flex justify-center pointer-events-none hidden"
-          style="bottom: calc(var(--chat-scroll-cta-offset) + var(--safe-area-inset-bottom))"
-        >
-          <button
-            id="scroll-to-bottom"
-            class="ui-chat-scroll-pill pointer-events-auto focus-ring"
-            aria-label="Scroll to bottom"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-            Scroll to bottom
-          </button>
-        </div>
-      </div>
-
-      <div class="flex flex-col" data-chat-bottom-rail="true">
-        <%= if @rate_limit_error do %>
-          <div
-            class="mx-auto mb-2 w-full max-w-3xl rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-700"
-            role="alert"
-          >
-            <%= @rate_limit_error %>
-          </div>
-        <% end %>
-
-        <div
-          class="ui-chat-composer-plane relative flex-none px-[var(--space-3)] pt-[var(--space-1)] pb-[var(--space-2)]"
-          data-chat-composer-row="true"
-        >
-          <div
-            aria-hidden="true"
-            class="ui-chat-composer-seam pointer-events-none absolute inset-x-[var(--space-16)] top-0 h-px"
+    <div id="prompt-bridge" phx-hook="PromptOnEvent" class="hidden"></div>
+    <%!-- sidebar uses heroicon controls and emits data-sidebar-action-icon markers --%>
+    <div data-page-shell class="h-screen overflow-y-auto overflow-x-hidden bg-background">
+      <div class="flex min-h-screen flex-col bg-background">
+        <div class="flex h-screen min-h-[42rem]">
+          <SidebarComponent.render
+            conversations={@conversations}
+            current_id={@current_conversation_id || @conversation_id || 0}
+            current_message_count={length(@messages)}
+            collapsed={!@sidebar_open}
           />
-
-          <div class="mx-auto w-full max-w-3xl" data-chat-composer-shell="true">
-            <form
-              phx-submit="send_message"
-              phx-change="update_input"
-              class={[
-                "ui-chat-composer-frame ui-chat-composer-frame-hover",
-                "relative flex min-h-[var(--chat-composer-min-height)] items-stretch",
-                "gap-[var(--space-2)] overflow-hidden rounded-[var(--chat-composer-radius)]",
-                "transition-all duration-300"
-              ]}
-              data-chat-composer-form="true"
-              data-chat-composer-state={if String.trim(@input) != "", do: "ready", else: "idle"}
-            >
-              <textarea
-                id="chat-input"
-                name="input"
-                phx-hook="ChatComposer"
-                rows="1"
-                placeholder="Ask..."
-                class="flex-1 resize-none bg-transparent px-[var(--chat-composer-field-padding-inline)] py-[var(--chat-composer-field-padding-block)] text-sm outline-none"
-                style="max-height: 192px; overflow-y: hidden;"
-                disabled={@is_sending}
-                data-chat-composer-field="true"
-              ><%= @input %></textarea>
-
+          <section
+            data-chat-surface="true"
+            data-chat-surface-mode="embedded"
+            class="relative grid h-full min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] bg-background"
+          >
+            <%= if @sidebar_open do %>
               <button
-                type="submit"
-                disabled={@is_sending}
-                class="ui-chat-send-button focus-ring shrink-0 self-center rounded-[var(--fva-shell-radius-control)] p-[var(--space-3)] mr-[var(--space-2)] transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label="Send message"
-                data-chat-send-state={
-                  if @is_sending || String.trim(@input) == "", do: "idle", else: "ready"
-                }
+                type="button"
+                phx-click="close_sidebar"
+                data-mobile-backdrop="true"
+                aria-label="Close sidebar"
+                class="absolute inset-y-0 left-64 right-0 z-20 block h-full border-0 bg-black/40 p-0 md:hidden"
               >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
               </button>
-            </form>
-          </div>
+            <% end %>
+            <header
+              class="ui-chat-header-surface relative z-20 flex shrink-0 items-center justify-between gap-[var(--space-3)] border-b border-[var(--border-color)] px-[var(--space-6)] py-[var(--space-3)]"
+              data-chat-surface-header="true"
+              data-chat-surface-header-mode="embedded"
+            >
+              <div class="flex min-w-0 items-center gap-[var(--space-4)]">
+                <button
+                  type="button"
+                  phx-click="toggle_sidebar"
+                  aria-label={if @sidebar_open, do: "Collapse sidebar", else: "Expand sidebar"}
+                  data-sidebar-toggle="true"
+                  class="icon-btn focus-ring inline-flex size-10 shrink-0 text-foreground/70 hover:text-foreground"
+                >
+                  <.icon name="hero-bars-3" class="size-4" />
+                </button>
+
+                <button
+                  type="button"
+                  phx-click="new_conversation"
+                  aria-label="Start a new conversation"
+                  title="New conversation"
+                  data-new-chat-trigger="true"
+                  class="focus-ring group inline-flex size-10 shrink-0 items-center justify-center rounded-[0.95rem] border border-foreground/10 bg-background/70 text-foreground/72 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:bg-background hover:text-foreground hover:shadow-md active:translate-y-0 active:scale-95"
+                >
+                  <.icon
+                    name="hero-pencil-square"
+                    class="size-5 transition-transform duration-200 group-hover:scale-105"
+                  />
+                </button>
+                <div class="flex min-w-0 flex-col gap-1.5">
+                  <p class="brand-wordmark truncate">
+                    Threadworks AI
+                  </p>
+                  <span class="brand-status-pill">Chat</span>
+                </div>
+              </div>
+
+              <div class="ml-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  phx-click="toggle_settings"
+                  aria-label="Conversation settings"
+                  class="icon-btn focus-ring inline-flex size-10 shrink-0 text-foreground/70 hover:text-foreground"
+                >
+                  <.icon name="hero-cog-6-tooth" class="size-4" />
+                </button>
+
+                <div
+                  role="group"
+                  aria-label="Theme"
+                  data-theme-source="js"
+                  class="theme-toggle flex items-center rounded-full p-1"
+                >
+                  <button
+                    type="button"
+                    aria-label="Use editorial theme"
+                    aria-pressed="true"
+                    title="Editorial"
+                    data-phx-theme="editorial"
+                    phx-click={JS.dispatch("phx:set-theme")}
+                    class="theme-toggle-button px-2 py-1 text-[0.625rem] font-semibold"
+                  >
+                    ED
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Use Swiss theme"
+                    aria-pressed="false"
+                    title="Swiss"
+                    data-phx-theme="swiss"
+                    phx-click={JS.dispatch("phx:set-theme")}
+                    class="theme-toggle-button px-2 py-1 text-[0.625rem] font-semibold"
+                  >
+                    SW
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Use mid-century theme"
+                    aria-pressed="false"
+                    title="Mid-century"
+                    data-phx-theme="mid-century"
+                    phx-click={JS.dispatch("phx:set-theme")}
+                    class="theme-toggle-button px-2 py-1 text-[0.625rem] font-semibold"
+                  >
+                    MC
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Use techno-brutalist theme"
+                    aria-pressed="false"
+                    title="Techno-brutalist"
+                    data-phx-theme="techno-brutalist"
+                    phx-click={JS.dispatch("phx:set-theme")}
+                    class="theme-toggle-button px-2 py-1 text-[0.625rem] font-semibold"
+                  >
+                    TB
+                  </button>
+                </div>
+              </div>
+            </header>
+
+            <%= if @settings_saved do %>
+              <div data-settings-saved class="px-4 py-2 text-xs text-[color:var(--status-success)]">
+                Settings saved
+              </div>
+            <% end %>
+
+            <%= if @settings_error do %>
+              <div class="px-4 py-2 text-xs text-[color:var(--status-error)]" role="alert">
+                <%= @settings_error %>
+              </div>
+            <% end %>
+
+            <%= if @settings_open do %>
+              <div
+                data-settings-drawer
+                class="border-b border-foreground/10 bg-background/70 px-4 py-3"
+              >
+                <form phx-submit="save_settings" novalidate class="grid gap-2 sm:grid-cols-3">
+                  <label class="text-xs text-foreground/70">
+                    Model
+                    <select
+                      name="settings[model]"
+                      class="mt-1 w-full rounded border border-foreground/20 bg-transparent px-2 py-1 text-sm"
+                    >
+                      <option
+                        value="gpt-4o-mini"
+                        selected={
+                          Conversations.settings_model_or_default(@current_conversation) ==
+                            "gpt-4o-mini"
+                        }
+                      >
+                        gpt-4o-mini
+                      </option>
+                      <option
+                        value="gpt-4o"
+                        selected={
+                          Conversations.settings_model_or_default(@current_conversation) == "gpt-4o"
+                        }
+                      >
+                        gpt-4o
+                      </option>
+                    </select>
+                  </label>
+
+                  <label class="text-xs text-foreground/70 sm:col-span-2">
+                    System prompt <textarea
+                      name="settings[system_prompt]"
+                      rows="2"
+                      class="mt-1 w-full rounded border border-foreground/20 bg-transparent px-2 py-1 text-sm"
+                    ><%= @current_conversation && @current_conversation.system_prompt || "" %></textarea>
+                  </label>
+
+                  <label class="text-xs text-foreground/70">
+                    Temperature
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="2"
+                      name="settings[temperature]"
+                      value={(@current_conversation && @current_conversation.temperature) || ""}
+                      class="mt-1 w-full rounded border border-foreground/20 bg-transparent px-2 py-1 text-sm"
+                    />
+                  </label>
+
+                  <div class="sm:col-span-2 flex items-end gap-2">
+                    <button
+                      type="submit"
+                      class="rounded border border-foreground/20 px-3 py-1 text-xs font-semibold hover:bg-foreground/5"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </form>
+              </div>
+            <% end %>
+
+            <%= if @current_conversation && is_binary(@current_conversation.system_prompt) &&
+              String.trim(@current_conversation.system_prompt) != "" do %>
+              <div data-system-prompt-present="true" class="hidden"></div>
+            <% end %>
+
+            <div
+              class="relative flex h-full min-h-0 w-full flex-col overflow-hidden"
+              data-chat-message-region="true"
+            >
+              <div
+                class={[
+                  "ui-chat-viewport-glow pointer-events-none absolute inset-x-0 top-0",
+                  if(@hero_state, do: "h-24 opacity-45", else: "h-32 opacity-70")
+                ]}
+                aria-hidden="true"
+              />
+
+              <div
+                id="chat-viewport"
+                class="ui-chat-transcript-plane ui-chat-transcript-frame z-10 flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain"
+                data-chat-message-viewport="true"
+                data-chat-transcript-mode="embedded"
+                data-chat-hero-state={to_string(@hero_state)}
+                phx-hook="ChatScroll"
+              >
+                <div
+                  class={[
+                    "ui-chat-message-stack shrink-0 mx-auto w-full max-w-[var(--chat-content-width)] flex min-h-full flex-col",
+                    if(@hero_state, do: "justify-center", else: "justify-end")
+                  ]}
+                  data-chat-message-stack="true"
+                  data-message-list-state={if @hero_state, do: "hero", else: "conversation"}
+                  data-message-list-mode="embedded"
+                >
+                  <%= if @hero_state do %>
+                    <div
+                      id={"hero-landing-#{@new_chat_nonce}"}
+                      data-new-chat-landing={to_string(@new_chat_nonce > 0)}
+                      class={[
+                        "animate-in fade-in fill-mode-both",
+                        if(@new_chat_nonce > 0,
+                          do: "zoom-in-90 slide-in-from-top-12 duration-1000 ease-out",
+                          else: "zoom-in-95 slide-in-from-top-4 duration-700 ease-out"
+                        )
+                      ]}
+                    >
+                      <.hero_intro />
+                    </div>
+                  <% else %>
+                    <%= for msg <- @messages do %>
+                      <.message_bubble message={msg} />
+                    <% end %>
+                    <%= for err <- @errors do %>
+                      <div
+                        class="ui-chat-message-error mx-auto max-w-[80%] rounded-lg border border-[color:color-mix(in_oklab,var(--status-error)_40%,transparent)] bg-[color:color-mix(in_oklab,var(--status-error)_10%,transparent)] px-3 py-2 text-xs text-foreground break-words"
+                        data-chat-message-error="true"
+                        data-role="assistant"
+                      >
+                        Error: <%= display_stream_error_reason(err.reason) %>
+                      </div>
+                    <% end %>
+
+                    <%= if @is_sending && @stream_buffer == "" do %>
+                      <div
+                        class="ui-chat-message-assistant rounded-[1.4rem] px-[var(--space-4)] py-[var(--space-3)] text-sm"
+                        data-chat-message-role="assistant"
+                      >
+                        <div
+                          data-typing-skeleton="true"
+                          class="typing-skeleton"
+                          aria-label="Assistant is responding"
+                        >
+                          <div
+                            data-typing-skeleton-line="1"
+                            class="typing-skeleton-line animate-pulse w-11/12"
+                          />
+                          <div
+                            data-typing-skeleton-line="2"
+                            class="typing-skeleton-line animate-pulse w-10/12"
+                          />
+                          <div
+                            data-typing-skeleton-line="3"
+                            class="typing-skeleton-line animate-pulse w-8/12"
+                          />
+                        </div>
+                      </div>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
+
+              <div
+                id="scroll-cta-dock"
+                class="ui-chat-scroll-cta-dock absolute left-0 right-0 z-10 flex justify-center pointer-events-none hidden"
+                style={
+              "bottom: calc(var(--chat-scroll-cta-offset) + var(--safe-area-inset-bottom))" <>
+                if(@hero_state, do: "; display: none", else: "")
+            }
+              >
+                <button
+                  id="scroll-to-bottom"
+                  class="ui-chat-scroll-pill pointer-events-auto focus-ring"
+                  aria-label="Scroll to bottom"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                  Scroll to bottom
+                </button>
+              </div>
+            </div>
+
+            <div class="flex flex-col" data-chat-bottom-rail="true">
+              <%= if Phoenix.Flash.get(@flash, :info) do %>
+                <div
+                  class="mx-auto mb-2 w-full max-w-3xl rounded-lg border border-[color:color-mix(in_oklab,var(--status-success)_40%,transparent)] bg-[color:color-mix(in_oklab,var(--status-success)_10%,transparent)] px-3 py-2 text-xs text-foreground break-words"
+                  role="alert"
+                >
+                  <%= Phoenix.Flash.get(@flash, :info) %>
+                </div>
+              <% end %>
+
+              <%= if @rate_limit_error do %>
+                <div
+                  class="mx-auto mb-2 w-full max-w-3xl rounded-lg border border-[color:color-mix(in_oklab,var(--status-error)_40%,transparent)] bg-[color:color-mix(in_oklab,var(--status-error)_10%,transparent)] px-3 py-2 text-xs text-foreground break-words"
+                  role="alert"
+                >
+                  <%= @rate_limit_error %>
+                </div>
+              <% end %>
+
+              <div
+                class="ui-chat-composer-plane relative flex-none px-[var(--space-3)] pt-[var(--space-1)] pb-[var(--space-2)]"
+                data-chat-composer-row="true"
+              >
+                <div
+                  aria-hidden="true"
+                  class="ui-chat-composer-seam pointer-events-none absolute inset-x-[var(--space-16)] top-0 h-px"
+                />
+
+                <div class="mx-auto w-full max-w-3xl" data-chat-composer-shell="true">
+                  <form
+                    phx-submit="send_message"
+                    phx-change="update_input"
+                    class={[
+                      "ui-chat-composer-frame ui-chat-composer-frame-hover",
+                      "relative flex min-h-[var(--chat-composer-min-height)] items-stretch",
+                      "gap-[var(--space-2)] overflow-hidden rounded-[var(--chat-composer-radius)]",
+                      "transition-all duration-300"
+                    ]}
+                    data-chat-composer-form="true"
+                    data-chat-composer-state={if String.trim(@input) != "", do: "ready", else: "idle"}
+                  >
+                    <textarea
+                      id="chat-input"
+                      name="input"
+                      phx-hook="ChatComposer"
+                      rows="1"
+                      placeholder="Ask..."
+                      class="flex-1 resize-none bg-transparent px-[var(--chat-composer-field-padding-inline)] py-[var(--chat-composer-field-padding-block)] text-sm outline-none"
+                      style="max-height: 192px; overflow-y: auto;"
+                      disabled={@is_sending}
+                      data-chat-composer-field="true"
+                    ><%= @input %></textarea>
+
+                    <%= if @is_sending do %>
+                      <div id="composer-action-stop" class="shrink-0 self-center mr-[var(--space-2)]">
+                        <button
+                          type="button"
+                          phx-click="stop_generation"
+                          class="ui-chat-send-button focus-ring rounded-[var(--fva-shell-radius-control)] p-[var(--space-3)] transition-all active:scale-95"
+                          aria-label="Stop generation"
+                        >
+                          Stop
+                        </button>
+                      </div>
+                    <% else %>
+                      <div id="composer-action-send" class="shrink-0 self-center mr-[var(--space-2)]">
+                        <button
+                          type="submit"
+                          class="ui-chat-send-button focus-ring rounded-[var(--fva-shell-radius-control)] p-[var(--space-3)] transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                          aria-label="Send message"
+                          data-chat-send-state={
+                            if String.trim(@input) == "", do: "idle", else: "ready"
+                          }
+                        >
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                          >
+                            <line x1="22" y1="2" x2="11" y2="13" />
+                            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                          </svg>
+                        </button>
+                      </div>
+                    <% end %>
+                  </form>
+
+                  <div class="mt-2 min-h-8 flex items-center">
+                    <%= if show_regenerate?(@messages, @is_sending) do %>
+                      <button
+                        type="button"
+                        phx-click="regenerate"
+                        data-message-action="regenerate"
+                        class="icon-btn rounded-full border border-foreground/20 text-xs font-semibold text-foreground/80"
+                        aria-label="Regenerate"
+                      >
+                        <.icon name="hero-arrow-path" class="size-4" />
+                      </button>
+                    <% end %>
+
+                    <button
+                      type="button"
+                      class="icon-btn invisible pointer-events-none"
+                      data-message-action="regenerate"
+                      aria-hidden="true"
+                      tabindex="-1"
+                    >
+                      <.icon name="hero-arrow-path" class="size-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      class="icon-btn invisible pointer-events-none"
+                      data-message-action="copy"
+                      aria-hidden="true"
+                      tabindex="-1"
+                    >
+                      <.icon name="hero-clipboard" class="size-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
+
+        <footer
+          data-site-footer
+          class="border-t border-foreground/10 bg-[color:color-mix(in_oklab,var(--background)_92%,black_8%)] px-[var(--space-6)] py-10"
+        >
+          <div class="mx-auto flex w-full max-w-6xl flex-col gap-8">
+            <div class="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(18rem,0.9fr)]">
+              <section class="space-y-3">
+                <p class="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-foreground/42">
+                  About Andrew
+                </p>
+                <p class="text-xl font-semibold tracking-tight text-foreground">
+                  Andrew Gardner
+                </p>
+                <p class="max-w-[38rem] text-[0.98rem] leading-7 text-foreground/72">
+                  Developer building practical software, AI-driven tools, and polished interfaces with an emphasis
+                  on clarity, responsiveness, and strong product feel.
+                </p>
+              </section>
+
+              <section class="space-y-3">
+                <p class="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-foreground/42">
+                  About The Project
+                </p>
+                <p class="text-xl font-semibold tracking-tight text-foreground">
+                  Threadworks AI
+                </p>
+                <p class="text-[0.98rem] leading-7 text-foreground/72">
+                  An NJIT IS322 final project built with Phoenix LiveView, combining streaming AI chat,
+                  persistent conversations, and a configurable interface inside a compact single-page console.
+                </p>
+              </section>
+
+              <nav aria-label="Andrew Gardner links" class="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                <a
+                  href="https://linkedin.com/in/andrew-gardner2026/"
+                  target="_blank"
+                  rel="noreferrer"
+                  class="rounded-2xl border border-foreground/12 bg-background/55 px-4 py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:bg-background/78 hover:shadow-sm"
+                >
+                  <span class="block text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-foreground/45">
+                    LinkedIn
+                  </span>
+                  <span class="mt-2 block text-sm font-semibold text-foreground">
+                    Professional profile
+                  </span>
+                  <span class="mt-1 block text-xs leading-5 text-foreground/58">
+                    Experience, background, and current work.
+                  </span>
+                </a>
+
+                <a
+                  href="https://github.com/atg25"
+                  target="_blank"
+                  rel="noreferrer"
+                  class="rounded-2xl border border-foreground/12 bg-background/55 px-4 py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:bg-background/78 hover:shadow-sm"
+                >
+                  <span class="block text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-foreground/45">
+                    GitHub
+                  </span>
+                  <span class="mt-2 block text-sm font-semibold text-foreground">
+                    Code and repositories
+                  </span>
+                  <span class="mt-1 block text-xs leading-5 text-foreground/58">
+                    Public projects, experiments, and build history.
+                  </span>
+                </a>
+
+                <a
+                  href="https://andrewg.vercel.app/"
+                  target="_blank"
+                  rel="noreferrer"
+                  class="rounded-2xl border border-foreground/12 bg-background/55 px-4 py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:bg-background/78 hover:shadow-sm"
+                >
+                  <span class="block text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-foreground/45">
+                    Portfolio
+                  </span>
+                  <span class="mt-2 block text-sm font-semibold text-foreground">
+                    Selected work
+                  </span>
+                  <span class="mt-1 block text-xs leading-5 text-foreground/58">
+                    Projects, resume, and contact details.
+                  </span>
+                </a>
+              </nav>
+            </div>
+
+            <div class="flex flex-col gap-2 border-t border-foreground/10 pt-4 text-sm text-foreground/55 md:flex-row md:items-center md:justify-between">
+              <p>
+                Built by Andrew Gardner for NJIT IS322.
+              </p>
+              <p>
+                Phoenix LiveView, SQLite persistence, and streaming AI responses.
+              </p>
+            </div>
+          </div>
+        </footer>
       </div>
-    </section>
+    </div>
     """
   end
 
@@ -386,13 +1206,24 @@ defmodule ChatAppWeb.ChatLive do
   defp message_bubble(%{message: %{role: :assistant}} = assigns) do
     ~H"""
     <div
-      class="ui-chat-message-assistant rounded-[1.4rem] px-[var(--space-4)] py-[var(--space-3)] text-[0.95rem] leading-relaxed"
+      class="ui-chat-message-assistant group rounded-[1.4rem] px-[var(--space-4)] py-[var(--space-3)] text-[0.95rem] leading-relaxed"
       data-chat-message-bubble={true}
       data-chat-message-role="assistant"
       data-role="assistant"
     >
-      <div class="prose prose-sm max-w-none">
+      <div class="prose prose-theme-inherit prose-sm max-w-none" data-assistant-markdown="true">
         <%= raw(Markdown.to_html(@message.content)) %>
+      </div>
+      <div class="mt-2 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+        <button
+          type="button"
+          phx-click={JS.dispatch("phx:copy", detail: %{text: @message.content})}
+          data-message-action="copy"
+          class="icon-btn rounded border border-foreground/20 text-xs text-foreground/70"
+          aria-label="Copy"
+        >
+          <.icon name="hero-clipboard" class="size-4" />
+        </button>
       </div>
     </div>
     """
@@ -402,7 +1233,7 @@ defmodule ChatAppWeb.ChatLive do
     ~H"""
     <div
       data-homepage-chat-intro="true"
-      class="mx-auto flex w-full max-w-3xl flex-col items-center justify-center px-[var(--space-4)] text-center animate-in fade-in slide-in-from-top-4 duration-700 ease-out fill-mode-both pb-[var(--hero-stack-body)]"
+      class="mx-auto flex w-full max-w-3xl flex-col items-center justify-center px-[var(--space-4)] text-center pb-[var(--hero-stack-body)]"
     >
       <div
         class="theme-label flex flex-wrap items-center justify-center gap-x-[var(--hero-badge-gap)] gap-y-[var(--phi-2)] text-[length:var(--hero-badge-font-size)] font-bold uppercase tracking-[0.22em]"
@@ -472,19 +1303,23 @@ defmodule ChatAppWeb.ChatLive do
   defp parse_hero_state(_params), do: true
 
   defp check_rate_limit(socket) do
-    case Hammer.check_rate(rate_key(socket), 60_000, 20) do
-      {:allow, _count} ->
-        :ok
+    if Application.get_env(:chat_app, :disable_rate_limit, false) do
+      :ok
+    else
+      case Hammer.check_rate(rate_key(socket), 60_000, 20) do
+        {:allow, _count} ->
+          :ok
 
-      {:deny, _limit} ->
-        message = "Slow down — you're sending messages too fast. Please wait a minute."
+        {:deny, _limit} ->
+          message = "Slow down — you're sending messages too fast. Please wait a minute."
 
-        {:rate_limited,
-         put_flash(
-           assign(socket, rate_limit_error: message),
-           :error,
-           message
-         )}
+          {:rate_limited,
+           put_flash(
+             assign(socket, rate_limit_error: message),
+             :error,
+             message
+           )}
+      end
     end
   end
 
@@ -494,25 +1329,23 @@ defmodule ChatAppWeb.ChatLive do
   end
 
   defp rate_key(socket) do
-    rate_limit_key_for_session(socket.assigns.session_id || "nil")
+    base = rate_limit_key_for_session(socket.assigns.session_id || "nil")
+    instance = socket.id || Integer.to_string(:erlang.phash2(self()))
+    base <> ":" <> instance
   end
 
-  defp drop_last_assistant(messages) do
+  def drop_last_assistant(messages) do
     case List.last(messages) do
       %{role: :assistant} -> List.delete_at(messages, -1)
       _ -> messages
     end
   end
 
-  defp maybe_drop_empty_assistant(messages, stream_buffer) do
-    if stream_buffer == "" do
-      case List.last(messages) do
-        %{role: :assistant, content: ""} -> List.delete_at(messages, -1)
-        _ -> messages
-      end
-    else
-      messages
-    end
+  defp show_regenerate?(messages, is_sending)
+       when is_list(messages) and is_boolean(is_sending) do
+    not is_sending and
+      Enum.any?(messages, &(&1.role == :user)) and
+      match?(%{role: :assistant}, List.last(messages))
   end
 
   defp maybe_recover_stale_send(socket) do
@@ -537,10 +1370,164 @@ defmodule ChatAppWeb.ChatLive do
 
   defp ensure_session_id(socket) do
     case socket.assigns.session_id do
-      nil -> assign(socket, session_id: :crypto.strong_rand_bytes(16) |> Base.encode16())
+      nil -> assign(socket, session_id: random_session_id())
       _ -> socket
     end
   end
+
+  defp ensure_conversation(socket) do
+    case socket.assigns.conversation_id do
+      id when is_integer(id) ->
+        case safe_get_conversation(id) do
+          nil ->
+            conversation = Conversations.get_or_create_active(socket.assigns.session_id)
+
+            assign(socket,
+              conversation_id: conversation.id,
+              current_conversation_id: conversation.id,
+              current_conversation: conversation,
+              conversations: Conversations.list_conversations(socket.assigns.session_id)
+            )
+
+          _ ->
+            socket
+        end
+
+      _ ->
+        conversation = Conversations.get_or_create_active(socket.assigns.session_id)
+
+        assign(socket,
+          conversation_id: conversation.id,
+          current_conversation_id: conversation.id,
+          current_conversation: conversation,
+          conversations: Conversations.list_conversations(socket.assigns.session_id)
+        )
+    end
+  end
+
+  defp safe_get_conversation(id) when is_integer(id) do
+    Conversations.get_conversation!(id)
+  rescue
+    Ecto.NoResultsError -> nil
+  end
+
+  defp conversation_for_session(socket, id_param) do
+    with {:ok, conversation_id} <- parse_conversation_id(id_param),
+         conversation when not is_nil(conversation) <- safe_get_conversation(conversation_id),
+         true <- conversation.session_id == socket.assigns.session_id do
+      {:ok, conversation}
+    else
+      _ -> :error
+    end
+  end
+
+  defp parse_conversation_id(id) when is_integer(id), do: {:ok, id}
+
+  defp parse_conversation_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {conversation_id, ""} -> {:ok, conversation_id}
+      _ -> :error
+    end
+  end
+
+  defp parse_conversation_id(_id), do: :error
+
+  defp openai_stream_opts(socket) do
+    conversation = socket.assigns.current_conversation
+
+    %{}
+    |> maybe_put(:model, if(conversation, do: conversation.model, else: nil))
+    |> maybe_put(:system_prompt, if(conversation, do: conversation.system_prompt, else: nil))
+    |> maybe_put(:temperature, if(conversation, do: conversation.temperature, else: nil))
+  end
+
+  defp maybe_put(opts, _key, value) when value in [nil, ""], do: opts
+  defp maybe_put(opts, key, value), do: Map.put(opts, key, value)
+
+  defp settings_error_message(changeset) do
+    case changeset.errors do
+      [{field, _} | _] -> "#{field} is invalid"
+      _ -> "settings are invalid"
+    end
+  end
+
+  defp ensure_assistant_row(socket, current_buffer) do
+    if is_integer(socket.assigns.assistant_message_id) do
+      {socket.assigns.assistant_message_id, socket.assigns.messages}
+    else
+      {:ok, row} =
+        Conversations.append_message(socket.assigns.conversation_id, :assistant, current_buffer)
+
+      messages = upsert_assistant_message(socket.assigns.messages, row.id, current_buffer)
+      {row.id, messages}
+    end
+  end
+
+  defp upsert_assistant_message(messages, message_id, buffer) do
+    assistant = %{id: message_id, role: :assistant, content: buffer}
+
+    case List.last(messages) do
+      %{role: :assistant} -> List.replace_at(messages, -1, assistant)
+      _ -> messages ++ [assistant]
+    end
+  end
+
+  defp schedule_persist_timer(socket) do
+    if socket.assigns.persist_timer_ref == nil do
+      ref = Process.send_after(self(), :persist_assistant_buffer, 250)
+      assign(socket, persist_timer_ref: ref, persist_dirty: true)
+    else
+      assign(socket, persist_dirty: true)
+    end
+  end
+
+  defp bump_persist_token_count(socket) do
+    assign(socket, persist_token_count: socket.assigns.persist_token_count + 1)
+  end
+
+  defp maybe_persist_by_token_threshold(socket) do
+    if rem(socket.assigns.persist_token_count, 10) == 0 and
+         is_integer(socket.assigns.assistant_message_id) do
+      Conversations.update_assistant_message(
+        socket.assigns.assistant_message_id,
+        socket.assigns.stream_buffer
+      )
+
+      assign(socket, persist_dirty: false)
+    else
+      socket
+    end
+  end
+
+  defp derive_session_id(socket, session) do
+    connect_params = if connected?(socket), do: get_connect_params(socket) || %{}, else: %{}
+
+    cond do
+      is_binary(socket.assigns[:session_id]) ->
+        socket.assigns.session_id
+
+      is_binary(Map.get(connect_params, "session_id")) ->
+        Map.get(connect_params, "session_id")
+
+      is_map(session) and is_binary(Map.get(session, "session_id")) ->
+        Map.get(session, "session_id")
+
+      Code.ensure_loaded?(Mix) and function_exported?(Mix, :env, 0) and Mix.env() == :test ->
+        "test-session"
+
+      is_map(session) and is_binary(Map.get(session, "_csrf_token")) ->
+        :crypto.hash(:sha256, Map.get(session, "_csrf_token")) |> Base.encode16(case: :lower)
+
+      is_binary(Map.get(connect_params, "_csrf_token")) ->
+        :crypto.hash(:sha256, Map.get(connect_params, "_csrf_token"))
+        |> Base.encode16(case: :lower)
+
+      true ->
+        random_session_id()
+    end
+  end
+
+  defp random_session_id, do: :crypto.strong_rand_bytes(16) |> Base.encode16()
 
   defp ensure_socket_changed(%Phoenix.LiveView.Socket{assigns: assigns} = socket) do
     if Map.has_key?(assigns, :__changed__) do
@@ -548,5 +1535,28 @@ defmodule ChatAppWeb.ChatLive do
     else
       %{socket | assigns: Map.put(assigns, :__changed__, %{})}
     end
+  end
+
+  defp cancel_stream(socket) do
+    if is_pid(socket.assigns[:stream_task_pid]) and Process.alive?(socket.assigns.stream_task_pid) do
+      Process.exit(socket.assigns.stream_task_pid, :shutdown)
+    end
+
+    if is_integer(socket.assigns[:assistant_message_id]) do
+      Conversations.update_assistant_message(
+        socket.assigns.assistant_message_id,
+        socket.assigns.stream_buffer
+      )
+    end
+
+    assign(socket,
+      is_sending: false,
+      stream_buffer: "",
+      stream_task_pid: nil,
+      assistant_message_id: nil,
+      persist_dirty: false,
+      persist_token_count: 0,
+      persist_timer_ref: nil
+    )
   end
 end

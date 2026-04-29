@@ -20,8 +20,10 @@ if System.get_env("PHX_SERVER") do
   config :chat_app, ChatAppWeb.Endpoint, server: true
 end
 
-config :chat_app, ChatAppWeb.Endpoint,
-  http: [port: String.to_integer(System.get_env("PORT", "4000"))]
+if config_env() != :test do
+  config :chat_app, ChatAppWeb.Endpoint,
+    http: [port: String.to_integer(System.get_env("PORT", "4000"))]
+end
 
 if config_env() == :prod do
   # The secret key base is used to sign/encrypt cookies and other secrets.
@@ -50,6 +52,17 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0}
     ],
     secret_key_base: secret_key_base
+
+  database_path =
+    System.get_env("DATABASE_PATH") ||
+      raise "DATABASE_PATH is missing — point at a writable .db path."
+
+  config :chat_app, ChatApp.Repo,
+    database: database_path,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE", "5"))
+
+  config :chat_app, :basic_auth_user, System.get_env("BASIC_AUTH_USER")
+  config :chat_app, :basic_auth_password, System.get_env("BASIC_AUTH_PASSWORD")
 
   # ## SSL Support
   #
@@ -89,13 +102,45 @@ if config_env() == :prod do
 end
 
 if config_env() == :dev do
-  env_path = Path.expand(".env", File.cwd!())
+  env_path = Path.expand("../.env", __DIR__)
 
   if File.exists?(env_path) do
-    apply(Dotenvy, :source!, [[".env", System.get_env()], [side_effect: &System.put_env/1]])
+    apply(Dotenvy, :source!, [[env_path, System.get_env()], [side_effect: &System.put_env/1]])
   end
 
   case System.get_env("OPENAI_API_KEY") do
+    key when key in [nil, "", "sk-local-dev", "sk-REPLACE_ME"] ->
+      fallback_key =
+        if File.exists?(env_path) do
+          env_path
+          |> File.read!()
+          |> String.split("\n")
+          |> Enum.find_value(fn line ->
+            case String.split(line, "=", parts: 2) do
+              ["OPENAI_API_KEY", value] -> String.trim(value)
+              _ -> nil
+            end
+          end)
+        end
+
+      case fallback_key do
+        value when value in [nil, "", "sk-local-dev", "sk-REPLACE_ME"] ->
+          raise """
+          OPENAI_API_KEY is not set.
+
+          For local development, copy .env.example to .env and fill in your key:
+
+              cp .env.example .env
+              # then edit .env
+
+          See README.md → Setup for details.
+          """
+
+        value ->
+          System.put_env("OPENAI_API_KEY", value)
+          Application.put_env(:chat_app, :openai_api_key, value)
+      end
+
     nil ->
       raise """
       OPENAI_API_KEY is not set.

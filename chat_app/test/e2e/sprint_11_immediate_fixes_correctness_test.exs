@@ -1,7 +1,7 @@
 defmodule ChatApp.OpenAI.E2EXssStub do
   @moduledoc false
 
-  def stream(_messages, pid) do
+  def stream(_messages, pid, _opts \\ []) do
     send(pid, {:stream_token, "<script>window.__pwned=1</script>"})
     send(pid, :stream_done)
   end

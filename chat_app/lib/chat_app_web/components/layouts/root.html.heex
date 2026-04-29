@@ -3,13 +3,14 @@
   lang="en"
   class="theme-editorial"
   data-theme="editorial"
-  style="height:100%; overflow-x:hidden;"
+  data-theme-source="js"
+  style="min-height:100%; overflow-x:hidden;"
 >
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
-    <title><%= assigns[:page_title] || "ChatApp" %></title>
+    <title><%= assigns[:page_title] || "Threadworks AI" %></title>
     <%!-- Google Fonts: IBM Plex Sans, IBM Plex Mono, Fraunces, Cormorant Garamond --%>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,32 +21,8 @@
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
-    <script>
-      (() => {
-        const themes = ["swiss", "mid-century", "techno-brutalist", "editorial"];
-        const themeClasses = themes.map((theme) => `theme-${theme}`);
-
-        const setTheme = (theme = "editorial") => {
-          const nextTheme = ["aurora", "luxury-typography", "art-deco"].includes(theme)
-            ? "editorial"
-            : (themes.includes(theme) ? theme : "editorial");
-          document.documentElement.classList.remove(...themeClasses);
-          document.documentElement.classList.add(`theme-${nextTheme}`);
-          document.documentElement.dataset.theme = nextTheme;
-          localStorage.setItem("phx:theme", nextTheme);
-        };
-
-        setTheme(localStorage.getItem("phx:theme") || document.documentElement.dataset.theme);
-        window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue));
-
-        window.addEventListener("phx:set-theme", (e) => {
-          const trigger = e.target.closest("[data-phx-theme]");
-          setTheme(trigger?.dataset.phxTheme);
-        });
-      })();
-    </script>
   </head>
-  <body class="bg-background text-foreground" style="height:100%; overflow:hidden;">
+  <body class="bg-background text-foreground" style="min-height:100%; overflow-x:hidden;">
     <%= @inner_content %>
   </body>
 </html>

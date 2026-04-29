@@ -19,6 +19,21 @@
 }
 
 @layer utilities {
+  .prose-theme-inherit {
+    color: var(--foreground);
+  }
+
+  .prose-theme-inherit :where(p, h1, h2, h3, h4, h5, h6, li, blockquote, strong, em, a) {
+    color: inherit;
+  }
+
+  .prose-theme-inherit code:not(pre code) {
+    background: color-mix(in oklab, var(--foreground) 10%, transparent);
+    border-radius: 0.375rem;
+    padding-inline: 0.35em;
+    padding-block: 0.15em;
+  }
+
   .focus-ring {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-interactive focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
@@ -67,12 +82,24 @@
   }
 
   .icon-btn {
-    @apply p-(--space-2) opacity-50 hover:opacity-100 transition-all active:scale-90;
+    @apply inline-flex items-center justify-center p-(--space-2) opacity-50 hover:opacity-100 transition-all active:scale-90;
     border-radius: var(--border-radius);
   }
 
   .icon-btn:hover {
     background-color: var(--surface-hover);
+  }
+
+  .typing-skeleton {
+    display: grid;
+    gap: 0.375rem;
+  }
+
+  .typing-skeleton-line {
+    height: 0.4rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--foreground) 20%, transparent);
+    @apply animate-pulse;
   }
 
   .site-container {
@@ -650,6 +677,12 @@
   .theme-toggle-button:hover {
     transform: translateY(-1px);
     border-color: color-mix(in oklab, var(--foreground) 20%, transparent);
+  }
+
+  .theme-toggle-button[aria-pressed="true"] {
+    background: var(--accent-interactive);
+    color: var(--accent-foreground);
+    border-color: var(--foreground);
   }
 
   :root[data-theme="swiss"] .theme-toggle-button[data-phx-theme="swiss"],

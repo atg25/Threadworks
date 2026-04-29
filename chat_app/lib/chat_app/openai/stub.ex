@@ -15,7 +15,7 @@ defmodule ChatApp.OpenAI.Stub do
   Sending an empty string keeps stream_buffer at "" so animate-pulse
   remains visible until a real token arrives.
   """
-  def stream(_messages, pid) do
+  def stream(_messages, pid, _opts \\ %{}) do
     send(pid, {:stream_token, ""})
     Process.sleep(100)
   end

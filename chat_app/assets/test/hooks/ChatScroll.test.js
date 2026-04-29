@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import ChatScroll from "../../js/hooks/ChatScroll";
 
 function makeScrollEl(scrollTop = 0, scrollHeight = 500, clientHeight = 500) {
@@ -17,12 +17,25 @@ function makeHook(el) {
   hook.el = el;
   hook.pushEvent = vi.fn();
   hook.isAtBottom = true;
+  hook.hasMovedUp = false;
+  hook.revealArmed = true;
+  hook.lastScrollTop = el.scrollTop + 100;
   return hook;
 }
 
 describe("ChatScroll", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
+    vi.stubGlobal("requestAnimationFrame", (callback) => {
+      callback();
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it("scrollToBottom sets el.scrollTop to el.scrollHeight", () => {
@@ -70,6 +83,7 @@ describe("ChatScroll", () => {
 
     const el = makeScrollEl(0, 600, 500);
     const hook = makeHook(el);
+    hook.dock = dock;
     hook.onScroll();
 
     expect(dock.classList.contains("hidden")).toBe(false);
@@ -83,6 +97,7 @@ describe("ChatScroll", () => {
 
     const el = makeScrollEl(61, 600, 500);
     const hook = makeHook(el);
+    hook.dock = dock;
     hook.onScroll();
 
     expect(dock.classList.contains("hidden")).toBe(true);
@@ -105,7 +120,7 @@ describe("ChatScroll", () => {
 
     const btn = document.createElement("button");
     btn.id = "scroll-to-bottom";
-    document.body.appendChild(btn);
+    dock.appendChild(btn);
 
     const el = makeScrollEl(0, 800, 500);
     const hook = makeHook(el);
@@ -124,7 +139,7 @@ describe("ChatScroll", () => {
 
     const btn = document.createElement("button");
     btn.id = "scroll-to-bottom";
-    document.body.appendChild(btn);
+    dock.appendChild(btn);
 
     const el = makeScrollEl(0, 800, 500);
     const hook = makeHook(el);
@@ -143,7 +158,7 @@ describe("ChatScroll", () => {
     btn.id = "scroll-to-bottom";
     const originalAddEventListener = btn.addEventListener.bind(btn);
     btn.addEventListener = vi.fn(originalAddEventListener);
-    document.body.appendChild(btn);
+    dock.appendChild(btn);
 
     const el = makeScrollEl(0, 600, 500);
     const hook = makeHook(el);

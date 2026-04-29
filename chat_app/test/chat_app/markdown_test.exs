@@ -81,4 +81,60 @@ defmodule ChatApp.MarkdownTest do
   test "nil input raises FunctionClauseError" do
     assert_raise FunctionClauseError, fn -> Markdown.to_html(nil) end
   end
+
+  # ---------------------------------------------------------------------------
+  # TASK 4 — Code-block wrapping tests
+  # ---------------------------------------------------------------------------
+
+  test "to_html wraps a fenced elixir block in .ui-code-block with data-language=elixir" do
+    md = "```elixir\nIO.puts(\"hi\")\n```"
+    result = Markdown.to_html(md)
+
+    assert result =~ ~s(class="ui-code-block")
+    assert result =~ ~s(data-language="elixir")
+    # Header span should mention "elixir"
+    assert result =~ "elixir"
+    # The pre/code block should still be present
+    assert result =~ "<pre>"
+    assert result =~ "<code"
+  end
+
+  test "to_html with an unlabeled fence sets data-language=text" do
+    md = "```\nplain\n```"
+    result = Markdown.to_html(md)
+
+    assert result =~ ~s(data-language="text")
+  end
+
+  test "to_html does NOT wrap inline code (single backtick)" do
+    md = "`print(\"hi\")`"
+    result = Markdown.to_html(md)
+
+    assert result =~ "<code"
+    refute result =~ ~s(class="ui-code-block")
+  end
+
+  test "to_html with multiple code blocks wraps each independently" do
+    md = "```elixir\nfoo\n```\n\n```python\nbar\n```"
+    result = Markdown.to_html(md)
+
+    count =
+      result
+      |> String.split(~s(class="ui-code-block"))
+      |> length()
+      |> Kernel.-(1)
+
+    assert count == 2
+    assert result =~ ~s(data-language="elixir")
+    assert result =~ ~s(data-language="python")
+  end
+
+  test "XSS protection is preserved through the code-block wrapper" do
+    md = "```\n<script>alert(1)</script>\n```"
+    result = Markdown.to_html(md)
+
+    refute result =~ "<script>"
+    assert result =~ "&lt;script&gt;"
+    assert result =~ ~s(class="ui-code-block")
+  end
 end

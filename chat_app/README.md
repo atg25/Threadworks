@@ -7,7 +7,10 @@ types a prompt, the server proxies it to the OpenAI Chat Completions API
 with `stream: true`, and assistant tokens are streamed back into the
 LiveView in real time. Markdown is rendered with Earmark; the hero intro
 collapses permanently on first send. State lives entirely in the LiveView
-socket — no database, no auth, no conversation persistence.
+socket and is persisted to SQLite (Ecto) so refreshes restore the conversation.
+
+For any non-localhost deployment, enable the basic-auth gate via
+`BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD`.
 
 This is the minimum viable shape of a larger "one compact system" product:
 today it does chat only.
@@ -24,6 +27,7 @@ today it does chat only.
 | HTTP client    | `Req ~> 0.5` (streams via `into:` callback)       |
 | Markdown       | `Earmark ~> 1.4`                                  |
 | JSON           | `Jason ~> 1.4`                                    |
+| Persistence    | `Ecto ~> 3.13` + `ecto_sqlite3`                   |
 | Env loading    | `Dotenvy ~> 0.8` (dev only)                       |
 | CSS            | Tailwind v4 (standalone CLI) + custom token layer |
 | JS bundler     | esbuild `0.25.4`                                  |
@@ -61,8 +65,8 @@ cp .env.example .env
 mix setup
 ```
 
-`mix setup` runs `deps.get`, installs the Tailwind and esbuild binaries,
-and compiles assets.
+`mix setup` runs `deps.get`, creates/migrates the dev SQLite DB, installs
+the Tailwind and esbuild binaries, and compiles assets.
 
 ---
 
@@ -87,6 +91,7 @@ iex -S mix phx.server
 mix test                       # unit + LiveView + integration + E2E
 mix test --exclude real_api    # skip the live-OpenAI smoke test (default)
 mix test --only real_api       # hit the real OpenAI API (requires valid key)
+mix test.setup                 # create/migrate test DB, then run tests
 mix precommit                  # full Elixir suite + Vitest JS hook suite
 ```
 
@@ -105,7 +110,9 @@ Run the JS hook tests directly via `cd assets && npm test`, or as part of `mix p
 
 #### CI
 
-On every push to `main` and on every pull request, CI runs `mix deps.get`, `mix compile --warnings-as-errors`, `mix test --exclude real_api --exclude e2e`, then `npm install` and `npm test` in `assets/`.
+On every push to `main` and on every pull request, CI runs `mix deps.get`,
+`mix compile --warnings-as-errors`, `mix test.setup --exclude real_api --exclude e2e`,
+then `npm install` and `npm test` in `assets/`.
 
 ### Production build
 
@@ -113,6 +120,21 @@ On every push to `main` and on every pull request, CI runs `mix deps.get`, `mix 
 MIX_ENV=prod mix assets.deploy
 MIX_ENV=prod mix release
 ```
+
+### Production deployment
+
+At minimum, a production release needs:
+
+- `DATABASE_PATH` pointing at a writable SQLite `.db` file
+- `SECRET_KEY_BASE` + `PHX_SERVER=true`
+- `OPENAI_API_KEY`
+
+Recommended gate for any non-localhost deploy:
+
+- `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD`
+
+If only one of the two basic-auth env vars is set, auth is bypassed.
+Set both and keep the password long and random (e.g. `openssl rand -base64 32`).
 
 ---
 
@@ -124,6 +146,10 @@ MIX_ENV=prod mix release
 | `SECRET_KEY_BASE`    | yes (prod only)    | Signs cookies / LiveView session — generate with `mix phx.gen.secret` | 64+ random chars                                               |
 | `PHX_SERVER`         | yes (prod)         | Set to `true` in a release to actually boot the HTTP endpoint         | `true`                                                         |
 | `PHX_HOST`           | recommended (prod) | Canonical host in generated URLs                                      | `chat.example.com`                                             |
+| `DATABASE_PATH`      | yes (prod)         | Writable path to the SQLite DB file                                   | `/var/lib/chat_app/chat_app.db`                                |
+| `POOL_SIZE`          | optional           | Repo pool size (default `5`)                                          | `5`                                                            |
+| `BASIC_AUTH_USER`    | recommended (prod) | Shared-secret basic auth username                                     | `admin`                                                        |
+| `BASIC_AUTH_PASSWORD`| recommended (prod) | Shared-secret basic auth password                                     | `use-a-long-random-string`                                     |
 | `PORT`               | optional           | HTTP port (default `4000`)                                            | `8080`                                                         |
 | `DNS_CLUSTER_QUERY`  | optional (prod)    | DNS-based clustering query string                                     | `myapp.internal`                                               |
 | `CHROMEDRIVER_PATH`  | optional (tests)   | Override chromedriver binary for Wallaby E2E                          | `/usr/local/bin/chromedriver`                                  |
@@ -206,7 +232,7 @@ This application exposes exactly one HTTP endpoint:
 
 | Method | Path | Auth | Description                                                                                                             |
 | ------ | ---- | ---- | ----------------------------------------------------------------------------------------------------------------------- |
-| `GET`  | `/`  | none | Renders `ChatAppWeb.ChatLive`, establishes a LiveView socket over `/live` (WebSocket with long-poll fallback at 2.5 s). |
+| `GET`  | `/`  | optional basic auth | Renders `ChatAppWeb.ChatLive`, establishes a LiveView socket over `/live` (WebSocket with long-poll fallback at 2.5 s). |
 
 There is no JSON API, no webhook, and no admin route.
 
@@ -216,6 +242,9 @@ LiveView events received from the browser:
 | ----------------- | ----------------------------- | ----------------------------------------------------------------------- |
 | `send_message`    | `%{"input" => String.t()}`    | Submit a user message (trimmed; ignored if blank or already streaming). |
 | `update_input`    | `%{"input" => String.t()}`    | Keystroke sync for `phx-change`.                                        |
+| `new_conversation`| `%{}`                          | Clear current messages and start a fresh persisted conversation.        |
+| `stop_generation` | `%{}`                          | Cancel the supervised streaming task mid-response.                      |
+| `regenerate`      | `%{}`                          | Drop last assistant bubble and re-stream from the last user message.    |
 | `scroll_position` | `%{"at_bottom" => boolean()}` | Pushed by `ChatScroll` on scroll.                                       |
 
 LiveView → self messages:

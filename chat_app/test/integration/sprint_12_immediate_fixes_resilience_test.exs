@@ -5,7 +5,7 @@ defmodule ChatAppWeb.Sprint12ImmediateFixesResilienceIntegrationTest do
   defmodule StreamCallTracker do
     @moduledoc false
 
-    def stream(_messages, pid) do
+    def stream(_messages, pid, _opts \\ []) do
       owner = Application.get_env(:chat_app, :sp12_stream_tracker_owner)
       send(owner, :sp12_stream_called)
       send(pid, {:stream_token, ""})

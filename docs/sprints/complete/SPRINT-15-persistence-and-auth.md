@@ -1,15 +1,16 @@
 ---
-status: planned
+status: complete
 ---
 
 # SPRINT 15 — Feature Foundation: Persistence + Auth + First Controls
 
-**Status:** PLANNED
+**Status:** COMPLETE
 **Created:** 2026-04-24
-**Activated:** TBD
-**Completed:** TBD
+**Activated:** Apr-26-2026
+**Completed:** 2026-04-27
 
 ## Goal
+
 Bridge the largest "demo → product" gap by giving conversations persistence (SQLite via Ecto), gating non-localhost deploys with basic auth, and shipping the two stop/theme controls that depend on Sprint 12's `Task.Supervisor` and Sprint 14's clean docs.
 
 **Total effort:** ~14 hours (1 × L + 1 × L + 1 × M + 2 × S)
@@ -23,70 +24,70 @@ Per-task descriptions below contain each task's primary tests. This section adds
 
 ### Layer summary
 
-| Layer | Tool | Test files | Tasks |
-| --- | --- | --- | --- |
-| Unit | ExUnit + `Ecto.Changeset` | `test/chat_app/conversations/conversation_test.exs` (new), `test/chat_app/conversations/message_test.exs` (new) | 1 |
-| Integration (DB) | ExUnit + `Ecto.Adapters.SQL.Sandbox` | `test/chat_app/conversations_test.exs` | 1, 4 |
-| Integration (LiveView + DB) | `Phoenix.LiveViewTest` + `DataCase` | `test/chat_app_web/live/chat_live_persistence_test.exs`, `test/chat_app_web/live/chat_live_stop_regen_test.exs` | 2, 4, 5 |
-| Integration (auth pipeline) | `Phoenix.ConnTest` | `test/chat_app_web/basic_auth_test.exs` | 3 |
-| E2E | Wallaby + ChromeDriver (`@moduletag :e2e`) | `test/chat_app_web/features/chat_e2e_test.exs` | 2, 3, 4, 5 |
-| Static | ripgrep, `mix ecto.migrate`, `mix compile --warnings-as-errors` | CI step / PR description | 1, 2, 3 |
+| Layer                       | Tool                                                            | Test files                                                                                                      | Tasks      |
+| --------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------- |
+| Unit                        | ExUnit + `Ecto.Changeset`                                       | `test/chat_app/conversations/conversation_test.exs` (new), `test/chat_app/conversations/message_test.exs` (new) | 1          |
+| Integration (DB)            | ExUnit + `Ecto.Adapters.SQL.Sandbox`                            | `test/chat_app/conversations_test.exs`                                                                          | 1, 4       |
+| Integration (LiveView + DB) | `Phoenix.LiveViewTest` + `DataCase`                             | `test/chat_app_web/live/chat_live_persistence_test.exs`, `test/chat_app_web/live/chat_live_stop_regen_test.exs` | 2, 4, 5    |
+| Integration (auth pipeline) | `Phoenix.ConnTest`                                              | `test/chat_app_web/basic_auth_test.exs`                                                                         | 3          |
+| E2E                         | Wallaby + ChromeDriver (`@moduletag :e2e`)                      | `test/chat_app_web/features/chat_e2e_test.exs`                                                                  | 2, 3, 4, 5 |
+| Static                      | ripgrep, `mix ecto.migrate`, `mix compile --warnings-as-errors` | CI step / PR description                                                                                        | 1, 2, 3    |
 
 ### Unit tests
 
-| Test name | Inputs | Expected | Guards against |
-| --- | --- | --- | --- |
-| `Conversation.changeset/2 requires session_id` | `Conversation.changeset(%Conversation{}, %{title: "x"})` | `changeset.valid?` is false; `errors[:session_id]` exists. | TASK 1 — schema accepting orphan rows. |
-| `Conversation.changeset/2 enforces unique session_id constraint at the schema layer` | Insert one conversation with `session_id: "abc"`; build a second changeset with the same id and run `Repo.insert/1`. | First insert returns `{:ok, _}`; second returns `{:error, %Ecto.Changeset{errors: [session_id: {_, [constraint: :unique, ...]}]}}`. | TASK 1 — duplicate active conversations per session, breaking `get_or_create/1`. |
-| `Message.changeset/2 rejects roles other than :user / :assistant` | `Message.changeset(%Message{}, %{conversation_id: 1, role: :system, content: "x"})` | `changeset.valid?` is false; `errors[:role]` mentions `:inclusion`. | TASK 1 — system or function-call roles silently persisted, polluting prompt context. |
-| `Message.changeset/2 requires content (non-empty string allowed)` | `Message.changeset(%Message{}, %{conversation_id: 1, role: :user})` (no content). | Invalid; `errors[:content]` exists. Empty string `""` is accepted (assistant-message placeholder before tokens). | TASK 1 — nil content reaching the OpenAI body builder. |
-| `cents_to_dollars/1 formats to two decimals with leading $` | `0`, `7`, `1234`, `100_000` | `"$0.00"`, `"$0.07"`, `"$12.34"`, `"$1000.00"`. | TASK 2 (header rail cost) — formatting drift across locales. |
-| `auth_basic_when_configured/2 is a no-op when both env vars are unset` | Build a conn; `Application.delete_env(:chat_app, :basic_auth_user)` and `:basic_auth_password`; call the plug. | Returned conn equals input conn (no `halt`, no `WWW-Authenticate` header set). | TASK 3 — accidentally locking dev / test environments. |
-| `drop_last_assistant/1 removes only the trailing assistant entry` | `[%{role: :user}, %{role: :assistant}]`, `[%{role: :user}]`, `[]`, `[%{role: :assistant}, %{role: :user}]`. | Returns `[%{role: :user}]`, `[%{role: :user}]`, `[]`, `[%{role: :assistant}, %{role: :user}]` (no change when last is :user). | TASK 4 — `Regenerate` accidentally deleting the user message. |
+| Test name                                                                            | Inputs                                                                                                               | Expected                                                                                                                            | Guards against                                                                       |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `Conversation.changeset/2 requires session_id`                                       | `Conversation.changeset(%Conversation{}, %{title: "x"})`                                                             | `changeset.valid?` is false; `errors[:session_id]` exists.                                                                          | TASK 1 — schema accepting orphan rows.                                               |
+| `Conversation.changeset/2 enforces unique session_id constraint at the schema layer` | Insert one conversation with `session_id: "abc"`; build a second changeset with the same id and run `Repo.insert/1`. | First insert returns `{:ok, _}`; second returns `{:error, %Ecto.Changeset{errors: [session_id: {_, [constraint: :unique, ...]}]}}`. | TASK 1 — duplicate active conversations per session, breaking `get_or_create/1`.     |
+| `Message.changeset/2 rejects roles other than :user / :assistant`                    | `Message.changeset(%Message{}, %{conversation_id: 1, role: :system, content: "x"})`                                  | `changeset.valid?` is false; `errors[:role]` mentions `:inclusion`.                                                                 | TASK 1 — system or function-call roles silently persisted, polluting prompt context. |
+| `Message.changeset/2 requires content (non-empty string allowed)`                    | `Message.changeset(%Message{}, %{conversation_id: 1, role: :user})` (no content).                                    | Invalid; `errors[:content]` exists. Empty string `""` is accepted (assistant-message placeholder before tokens).                    | TASK 1 — nil content reaching the OpenAI body builder.                               |
+| `cents_to_dollars/1 formats to two decimals with leading $`                          | `0`, `7`, `1234`, `100_000`                                                                                          | `"$0.00"`, `"$0.07"`, `"$12.34"`, `"$1000.00"`.                                                                                     | TASK 2 (header rail cost) — formatting drift across locales.                         |
+| `auth_basic_when_configured/2 is a no-op when both env vars are unset`               | Build a conn; `Application.delete_env(:chat_app, :basic_auth_user)` and `:basic_auth_password`; call the plug.       | Returned conn equals input conn (no `halt`, no `WWW-Authenticate` header set).                                                      | TASK 3 — accidentally locking dev / test environments.                               |
+| `drop_last_assistant/1 removes only the trailing assistant entry`                    | `[%{role: :user}, %{role: :assistant}]`, `[%{role: :user}]`, `[]`, `[%{role: :assistant}, %{role: :user}]`.          | Returns `[%{role: :user}]`, `[%{role: :user}]`, `[]`, `[%{role: :assistant}, %{role: :user}]` (no change when last is :user).       | TASK 4 — `Regenerate` accidentally deleting the user message.                        |
 
 ### Integration tests
 
-| Test name | Inputs | Expected | Guards against |
-| --- | --- | --- | --- |
-| `get_or_create/1 is idempotent` | Call twice with `"sess-1"`. | Both return the same `%Conversation{id: id}`; `Repo.aggregate(Conversation, :count)` is 1. | TASK 1 — double-insert under race; 2 conversation rows per session. |
-| `append_message/3 returns inserted message with id` | `append_message(conv.id, :user, "hi")`. | `{:ok, %Message{id: int, role: :user, content: "hi", conversation_id: ^conv.id}}`. | TASK 1 — silent failure due to missing `:conversation_id` in cast list. |
-| `update_assistant_message/2 mutates content in place` | Insert a placeholder assistant message; `update_assistant_message(id, "new buffer")`. | `Repo.get!(Message, id).content == "new buffer"`. | TASK 2 — append-only writes that quadratically explode the messages table. |
-| `delete_conversation/1 cascades to messages` | Conv with 3 messages; delete the conv. | `Repo.aggregate(Message, :count, where: [conversation_id: ^id]) == 0`. | TASK 1 — orphan messages outliving their conversation. |
-| `messages are restored on remount` | Submit a message, drive `:stream_token` + `:stream_done`; kill the LiveView; mount a new one with same session id. | `assigns.messages` length matches what was sent; assistant content equals the streamed buffer. | TASK 2 — refresh wipes the conversation. |
-| `new_conversation event clears messages and shows hero` | Send a message, then trigger `phx-click="new_conversation"`. | After event: `length(assigns.messages) == 0`; `assigns.hero_state == true`; new conversation row exists in DB (the prior was reset/replaced). | TASK 2 — reset that wipes messages from memory but leaves stale rows in DB (or vice versa). |
-| `empty assistant content is persisted as ""` | Drive `:stream_done` immediately with an empty buffer. | `Repo.get!(Message, id).content == ""`. | TASK 2 — persisting `nil` and crashing the next mount. |
-| `per-conversation isolation: two session_ids do not share messages` | Mount as `"sess-A"`, send 2 messages. Mount as `"sess-B"`. | `assigns.messages` for `"sess-B"` is `[]`. | TASK 2 — leakage via shared `Repo` query. |
-| `throttled writes: 100 tokens result in fewer than 100 Repo updates` | Stub a stream that emits 100 tokens; attach `:telemetry.attach` on `[:chat_app, :repo, :query]`. | Update count ≤ 25 (10/token threshold + final). | TASK 2 — un-debounced writes saturating SQLite. |
-| `:stream_done forces a final write` | 5 tokens then `:stream_done`. | Final `Repo.get!(Message, id).content` equals the full buffer. | TASK 2 — debounce timer dropping the final fragment. |
-| `GET / returns 200 when basic_auth_user is unset` | Conn; both env vars unset. | Status 200; HTML contains the chat composer. | TASK 3 — auth on by default in dev. |
-| `GET / returns 401 when configured and no Authorization header is sent` | Set `:basic_auth_user`/`:basic_auth_password`; send a plain `get(conn, "/")`. | Status 401; `WWW-Authenticate` header present. | TASK 3 — protection only checked on POST, not GET. |
-| `GET / returns 200 when correct Authorization header is sent` | Set credentials; send `Plug.BasicAuth.encode_basic_auth(user, pass)` header. | Status 200. | TASK 3 — credential comparison broken (e.g. case-sensitive header name). |
-| `GET / returns 401 with wrong password` | Set credentials; send wrong password header. | Status 401; constant-time comparison observed (no early return on first byte mismatch — guaranteed by `Plug.Crypto.secure_compare/2`). | TASK 3 — bypass via timing / wrong comparison. |
-| `stop_generation kills the streaming task and clears state` | Submit; receive 1 token; trigger `phx-click="stop_generation"`. | `assigns.stream_task_pid == nil`; `assigns.is_sending == false`; partial assistant message persists in `assigns.messages` AND in the DB. | TASK 4 — Stop swallowing the partial output, OR leaving a zombie task. |
-| `regenerate after stream_done removes the last assistant message and re-streams from the prior user message` | Run a complete turn; trigger `phx-click="regenerate"`. | `length(assigns.messages)` decreases by 1; corresponding DB row deleted; a new streaming task is spawned with the original user prompt. | TASK 4 — Regenerate replaying the wrong message, OR appending instead of replacing. |
-| `regenerate while is_sending is a no-op` | Submit; before `:stream_done`, dispatch `regenerate`. | Assigns unchanged; no new task spawned; no DB delete. | TASK 4 — racing tasks producing duplicate streams. |
-| `header rail contains three theme buttons with non-empty aria-labels` | `live(conn, "/")`; render. | `Floki.find(html, "[data-phx-theme]") |> length() == 3`; every match's `aria-label` is non-empty. | TASK 5 — partial render, accessibility regression. |
+| Test name                                                                                                    | Inputs                                                                                                             | Expected                                                                                                                                      | Guards against                                                                              |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `get_or_create/1 is idempotent`                                                                              | Call twice with `"sess-1"`.                                                                                        | Both return the same `%Conversation{id: id}`; `Repo.aggregate(Conversation, :count)` is 1.                                                    | TASK 1 — double-insert under race; 2 conversation rows per session.                         |
+| `append_message/3 returns inserted message with id`                                                          | `append_message(conv.id, :user, "hi")`.                                                                            | `{:ok, %Message{id: int, role: :user, content: "hi", conversation_id: ^conv.id}}`.                                                            | TASK 1 — silent failure due to missing `:conversation_id` in cast list.                     |
+| `update_assistant_message/2 mutates content in place`                                                        | Insert a placeholder assistant message; `update_assistant_message(id, "new buffer")`.                              | `Repo.get!(Message, id).content == "new buffer"`.                                                                                             | TASK 2 — append-only writes that quadratically explode the messages table.                  |
+| `delete_conversation/1 cascades to messages`                                                                 | Conv with 3 messages; delete the conv.                                                                             | `Repo.aggregate(Message, :count, where: [conversation_id: ^id]) == 0`.                                                                        | TASK 1 — orphan messages outliving their conversation.                                      |
+| `messages are restored on remount`                                                                           | Submit a message, drive `:stream_token` + `:stream_done`; kill the LiveView; mount a new one with same session id. | `assigns.messages` length matches what was sent; assistant content equals the streamed buffer.                                                | TASK 2 — refresh wipes the conversation.                                                    |
+| `new_conversation event clears messages and shows hero`                                                      | Send a message, then trigger `phx-click="new_conversation"`.                                                       | After event: `length(assigns.messages) == 0`; `assigns.hero_state == true`; new conversation row exists in DB (the prior was reset/replaced). | TASK 2 — reset that wipes messages from memory but leaves stale rows in DB (or vice versa). |
+| `empty assistant content is persisted as ""`                                                                 | Drive `:stream_done` immediately with an empty buffer.                                                             | `Repo.get!(Message, id).content == ""`.                                                                                                       | TASK 2 — persisting `nil` and crashing the next mount.                                      |
+| `per-conversation isolation: two session_ids do not share messages`                                          | Mount as `"sess-A"`, send 2 messages. Mount as `"sess-B"`.                                                         | `assigns.messages` for `"sess-B"` is `[]`.                                                                                                    | TASK 2 — leakage via shared `Repo` query.                                                   |
+| `throttled writes: 100 tokens result in fewer than 100 Repo updates`                                         | Stub a stream that emits 100 tokens; attach `:telemetry.attach` on `[:chat_app, :repo, :query]`.                   | Update count ≤ 25 (10/token threshold + final).                                                                                               | TASK 2 — un-debounced writes saturating SQLite.                                             |
+| `:stream_done forces a final write`                                                                          | 5 tokens then `:stream_done`.                                                                                      | Final `Repo.get!(Message, id).content` equals the full buffer.                                                                                | TASK 2 — debounce timer dropping the final fragment.                                        |
+| `GET / returns 200 when basic_auth_user is unset`                                                            | Conn; both env vars unset.                                                                                         | Status 200; HTML contains the chat composer.                                                                                                  | TASK 3 — auth on by default in dev.                                                         |
+| `GET / returns 401 when configured and no Authorization header is sent`                                      | Set `:basic_auth_user`/`:basic_auth_password`; send a plain `get(conn, "/")`.                                      | Status 401; `WWW-Authenticate` header present.                                                                                                | TASK 3 — protection only checked on POST, not GET.                                          |
+| `GET / returns 200 when correct Authorization header is sent`                                                | Set credentials; send `Plug.BasicAuth.encode_basic_auth(user, pass)` header.                                       | Status 200.                                                                                                                                   | TASK 3 — credential comparison broken (e.g. case-sensitive header name).                    |
+| `GET / returns 401 with wrong password`                                                                      | Set credentials; send wrong password header.                                                                       | Status 401; constant-time comparison observed (no early return on first byte mismatch — guaranteed by `Plug.Crypto.secure_compare/2`).        | TASK 3 — bypass via timing / wrong comparison.                                              |
+| `stop_generation kills the streaming task and clears state`                                                  | Submit; receive 1 token; trigger `phx-click="stop_generation"`.                                                    | `assigns.stream_task_pid == nil`; `assigns.is_sending == false`; partial assistant message persists in `assigns.messages` AND in the DB.      | TASK 4 — Stop swallowing the partial output, OR leaving a zombie task.                      |
+| `regenerate after stream_done removes the last assistant message and re-streams from the prior user message` | Run a complete turn; trigger `phx-click="regenerate"`.                                                             | `length(assigns.messages)` decreases by 1; corresponding DB row deleted; a new streaming task is spawned with the original user prompt.       | TASK 4 — Regenerate replaying the wrong message, OR appending instead of replacing.         |
+| `regenerate while is_sending is a no-op`                                                                     | Submit; before `:stream_done`, dispatch `regenerate`.                                                              | Assigns unchanged; no new task spawned; no DB delete.                                                                                         | TASK 4 — racing tasks producing duplicate streams.                                          |
+| `header rail contains three theme buttons with non-empty aria-labels`                                        | `live(conn, "/")`; render.                                                                                         | `Floki.find(html, "[data-phx-theme]")                                                                                                         | > length() == 3`; every match's `aria-label` is non-empty.                                  | TASK 5 — partial render, accessibility regression. |
 
 ### E2E tests (Wallaby — `@moduletag :e2e`)
 
-| Test name | Inputs | Expected | Guards against |
-| --- | --- | --- | --- |
-| Positive — refresh restores conversation | Open `/`; send `"hello"`; await `:stream_done`; reload page. | Both user and assistant bubbles re-appear with the same text; hero is hidden. | TASK 2 — DB or session_id wiring drift. |
-| Negative — basic auth blocks anonymous request when configured | Set `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` in the test env; navigate Wallaby to `/` with no credentials. | Browser receives 401 (Wallaby surfaces as a navigation error); `data-chat-state` element is never reached. | TASK 3 — auth bypassed by LiveView socket upgrade. |
-| Negative — Stop button cancels mid-stream and partial content remains | Open `/`; submit a long prompt against an E2E stub that streams 1 token / 200ms; click Stop after first token visible. | Streaming halts within 500ms; partial assistant text remains visible; refresh continues to show it (DB persisted). | TASK 4 — Stop wiping the partial OR not actually stopping. |
-| Negative — Regenerate without a prior assistant turn is a no-op (no DB churn) | Open `/`; without sending anything, force the `regenerate` event via JS console. | No new task spawned; `Repo.aggregate(Message, :count) == 0`; no client-side error. | TASK 4 — `regenerate` crashing on empty conversation. |
-| Negative — Theme toggle survives page reload | Open `/`; click dark; reload. | `<html data-theme="dark">` is set on reload (localStorage round-trip works). | TASK 5 — JS hook regression on the `phx:set-theme` listener. |
+| Test name                                                                     | Inputs                                                                                                                 | Expected                                                                                                           | Guards against                                               |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| Positive — refresh restores conversation                                      | Open `/`; send `"hello"`; await `:stream_done`; reload page.                                                           | Both user and assistant bubbles re-appear with the same text; hero is hidden.                                      | TASK 2 — DB or session_id wiring drift.                      |
+| Negative — basic auth blocks anonymous request when configured                | Set `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` in the test env; navigate Wallaby to `/` with no credentials.            | Browser receives 401 (Wallaby surfaces as a navigation error); `data-chat-state` element is never reached.         | TASK 3 — auth bypassed by LiveView socket upgrade.           |
+| Negative — Stop button cancels mid-stream and partial content remains         | Open `/`; submit a long prompt against an E2E stub that streams 1 token / 200ms; click Stop after first token visible. | Streaming halts within 500ms; partial assistant text remains visible; refresh continues to show it (DB persisted). | TASK 4 — Stop wiping the partial OR not actually stopping.   |
+| Negative — Regenerate without a prior assistant turn is a no-op (no DB churn) | Open `/`; without sending anything, force the `regenerate` event via JS console.                                       | No new task spawned; `Repo.aggregate(Message, :count) == 0`; no client-side error.                                 | TASK 4 — `regenerate` crashing on empty conversation.        |
+| Negative — Theme toggle survives page reload                                  | Open `/`; click dark; reload.                                                                                          | `<html data-theme="dark">` is set on reload (localStorage round-trip works).                                       | TASK 5 — JS hook regression on the `phx:set-theme` listener. |
 
 ### Static / CI checks (no test framework)
 
-| Check | Inputs | Expected | Guards against |
-| --- | --- | --- | --- |
-| `mix ecto.migrate` is idempotent | Run twice in a row in `MIX_ENV=test`. | Second run prints `Already up`; exit 0. | TASK 1 — non-idempotent migration breaking CI re-runs. |
-| `ChatApp.Repo` is the first child of the application supervisor | `rg "ChatApp\\.Repo" chat_app/lib/chat_app/application.ex` and inspect order. | Repo appears before `ChatAppWeb.Endpoint` in the children list. | TASK 1 — Repo started after Endpoint causing first-mount crashes. |
-| `unique_index(:conversations, [:session_id])` exists exactly once | `rg "unique_index\\(:conversations" chat_app/priv/repo/migrations/` | Exactly one match. | TASK 1 — duplicate index, OR forgotten index allowing duplicates. |
-| Basic auth never enabled in dev/test by default | `rg "basic_auth_user|basic_auth_password" chat_app/config/{dev,test}.exs` | Zero matches. | TASK 3 — accidentally shipping locked-down dev. |
-| `.env.example` documents all new env vars | `rg "DATABASE_PATH|POOL_SIZE|BASIC_AUTH_USER|BASIC_AUTH_PASSWORD" chat_app/.env.example` | Four matches. | TASKS 1+3 — silent operator surprise. |
-| `mix compile --warnings-as-errors` clean after schema add | Run after TASK 1. | Exit 0. | TASK 1 — unused alias / unused schema warnings. |
+| Check                                                             | Inputs                                                                        | Expected                                                        | Guards against                                                    |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------- | ------------- | ------------------------------------- |
+| `mix ecto.migrate` is idempotent                                  | Run twice in a row in `MIX_ENV=test`.                                         | Second run prints `Already up`; exit 0.                         | TASK 1 — non-idempotent migration breaking CI re-runs.            |
+| `ChatApp.Repo` is the first child of the application supervisor   | `rg "ChatApp\\.Repo" chat_app/lib/chat_app/application.ex` and inspect order. | Repo appears before `ChatAppWeb.Endpoint` in the children list. | TASK 1 — Repo started after Endpoint causing first-mount crashes. |
+| `unique_index(:conversations, [:session_id])` exists exactly once | `rg "unique_index\\(:conversations" chat_app/priv/repo/migrations/`           | Exactly one match.                                              | TASK 1 — duplicate index, OR forgotten index allowing duplicates. |
+| Basic auth never enabled in dev/test by default                   | `rg "basic_auth_user                                                          | basic_auth_password" chat_app/config/{dev,test}.exs`            | Zero matches.                                                     | TASK 3 — accidentally shipping locked-down dev. |
+| `.env.example` documents all new env vars                         | `rg "DATABASE_PATH                                                            | POOL_SIZE                                                       | BASIC_AUTH_USER                                                   | BASIC_AUTH_PASSWORD" chat_app/.env.example`     | Four matches. | TASKS 1+3 — silent operator surprise. |
+| `mix compile --warnings-as-errors` clean after schema add         | Run after TASK 1.                                                             | Exit 0.                                                         | TASK 1 — unused alias / unused schema warnings.                   |
 
 ---
 
@@ -100,10 +101,12 @@ Today the entire conversation is held in the LiveView socket and disappears on r
 **Exact Scope:**
 
 - `chat_app/mix.exs`: add to `deps/0`:
+
   ```elixir
   {:ecto_sql, "~> 3.10"},
   {:ecto_sqlite3, "~> 0.13"}
   ```
+
   Run `mix deps.get`. Verify exact current versions via `mix hex.info ecto_sql` and `mix hex.info ecto_sqlite3` and pin the latest stable major.
 
 - `chat_app/config/config.exs`:
@@ -111,6 +114,7 @@ Today the entire conversation is held in the LiveView socket and disappears on r
   - Keep the `generators: [timestamp_type: :utc_datetime]` line uncommented now (Sprint 14 TASK 3 left it gated behind a comment; remove the comment, the config is now used).
 
 - `chat_app/config/dev.exs`:
+
   ```elixir
   config :chat_app, ChatApp.Repo,
     database: Path.expand("../priv/repo/chat_app_dev.db", __DIR__),
@@ -119,6 +123,7 @@ Today the entire conversation is held in the LiveView socket and disappears on r
   ```
 
 - `chat_app/config/test.exs`:
+
   ```elixir
   config :chat_app, ChatApp.Repo,
     database: Path.expand("../priv/repo/chat_app_test.db", __DIR__),
@@ -127,6 +132,7 @@ Today the entire conversation is held in the LiveView socket and disappears on r
   ```
 
 - `chat_app/config/runtime.exs` (inside the `if config_env() == :prod` block, after the existing endpoint config):
+
   ```elixir
   database_path =
     System.get_env("DATABASE_PATH") ||
@@ -140,6 +146,7 @@ Today the entire conversation is held in the LiveView socket and disappears on r
 - `chat_app/.env.example`: add `# DATABASE_PATH=/var/lib/chat_app/chat_app.db` and `# POOL_SIZE=5` under the `### Required in prod only` block.
 
 - `chat_app/lib/chat_app/repo.ex`:
+
   ```elixir
   defmodule ChatApp.Repo do
     use Ecto.Repo,
@@ -151,6 +158,7 @@ Today the entire conversation is held in the LiveView socket and disappears on r
 - `chat_app/lib/chat_app/application.ex`: add `ChatApp.Repo` as the FIRST child in the supervisor list (before Telemetry), so migrations and queries are available before the endpoint accepts requests.
 
 - `chat_app/lib/chat_app/conversations.ex` (new):
+
   ```elixir
   defmodule ChatApp.Conversations do
     @moduledoc """
@@ -196,6 +204,7 @@ Today the entire conversation is held in the LiveView socket and disappears on r
   ```
 
 - `chat_app/lib/chat_app/conversations/conversation.ex` (new):
+
   ```elixir
   defmodule ChatApp.Conversations.Conversation do
     use Ecto.Schema
@@ -218,6 +227,7 @@ Today the entire conversation is held in the LiveView socket and disappears on r
   ```
 
 - `chat_app/lib/chat_app/conversations/message.ex` (new):
+
   ```elixir
   defmodule ChatApp.Conversations.Message do
     use Ecto.Schema
@@ -242,6 +252,7 @@ Today the entire conversation is held in the LiveView socket and disappears on r
   ```
 
 - `chat_app/priv/repo/migrations/20260424120000_create_conversations.exs` (new):
+
   ```elixir
   defmodule ChatApp.Repo.Migrations.CreateConversations do
     use Ecto.Migration
@@ -280,23 +291,26 @@ Today the entire conversation is held in the LiveView socket and disappears on r
   Add a new `test.setup` alias used in CI: `["ecto.create --quiet", "ecto.migrate --quiet", "test"]`. Update CI (`.github/workflows/ci.yml`) to run `mix test.setup` instead of `mix test`.
 
 **Acceptance Criteria:**
-- [ ] `mix ecto.create && mix ecto.migrate` succeeds in dev and creates `priv/repo/chat_app_dev.db`.
-- [ ] `mix ecto.create --quiet && mix ecto.migrate --quiet && mix test` succeeds in test.
-- [ ] `Conversations.get_or_create/1` returns the same conversation row across calls with the same session_id.
-- [ ] `Conversations.append_message/3` rejects roles other than `:user` and `:assistant`.
-- [ ] Deleting a conversation cascades to messages.
-- [ ] All ≥8 new unit tests pass.
-- [ ] `ChatApp.Repo` is the first child of the application supervisor.
-- [ ] `mix precommit` exits 0.
-- [ ] `.env.example` documents `DATABASE_PATH` and `POOL_SIZE`.
+
+- [x] `mix ecto.create && mix ecto.migrate` succeeds in dev and creates `priv/repo/chat_app_dev.db`.
+- [x] `mix ecto.create --quiet && mix ecto.migrate --quiet && mix test` succeeds in test.
+- [x] `Conversations.get_or_create/1` returns the same conversation row across calls with the same session_id.
+- [x] `Conversations.append_message/3` rejects roles other than `:user` and `:assistant`.
+- [x] Deleting a conversation cascades to messages.
+- [x] All ≥8 new unit tests pass.
+- [x] `ChatApp.Repo` is the first child of the application supervisor.
+- [x] `mix precommit` exits 0.
+- [x] `.env.example` documents `DATABASE_PATH` and `POOL_SIZE`.
 
 **Edge Cases to Handle:**
+
 - SQLite file path doesn't exist on first boot — `mix ecto.create` creates it; on first prod boot, the `DATABASE_PATH` directory must be writable (documented in README).
 - Two LiveViews mount with the same session_id (browser dup tab) — `get_or_create/1` is idempotent; both share the same conversation row.
 - Migration runs against an already-migrated DB — `ecto.migrate` is idempotent.
 - Concurrent message inserts within one conversation — SQLite's WAL mode is enabled by default in `ecto_sqlite3`; serialization is fine for v1's load.
 
 **Do NOT do:**
+
 - Do NOT wire the LiveView to the Repo in this task — that is TASK 2.
 - Do NOT add Postgres as an option in `mix.exs` deps.
 - Do NOT add full-text search (FTS5) on messages — out of scope for v1.
@@ -316,7 +330,6 @@ TASK 1 lands the schema; this task makes the LiveView actually use it. After thi
 **Exact Scope:**
 
 - `chat_app/lib/chat_app_web/live/chat_live.ex`:
-
   - In `mount/3`:
     - Generate `session_id` once per LiveView (already done in Sprint 12 TASK 3); ensure it persists across reconnects by reading from `socket.assigns[:session_id]` if present, else using the connect_params token. Phoenix LiveView's `get_connect_params/1` exposes a stable client-side session id if provided. For v1, accept that a hard refresh resets the session_id; full session-cookie wiring is in Sprint 16.
     - On `connected?(socket) == true`:
@@ -354,23 +367,26 @@ TASK 1 lands the schema; this task makes the LiveView actually use it. After thi
   - `":stream_done forces a final write"` — drive 5 tokens then `:stream_done`, verify the final stored content equals the full buffer.
 
 **Acceptance Criteria:**
-- [ ] On mount, `messages` are populated from the DB.
-- [ ] On send, the user message is persisted before the streaming task starts.
-- [ ] During streaming, the assistant message is upserted in the DB at most once per 250ms / 10 tokens.
-- [ ] On `:stream_done`, a final write captures the complete buffer.
-- [ ] "New conversation" button in the header rail clears messages and resets hero.
-- [ ] Hard refresh of the page shows the same conversation (modulo the v1 session_id-on-mount limitation, documented in README).
-- [ ] All ≥6 new tests pass.
-- [ ] All previously-passing LiveView tests pass (existing tests use `:openai_module` stubs and don't touch the DB; ensure `Ecto.Adapters.SQL.Sandbox.checkout` is in `ConnCase`'s setup).
-- [ ] `mix precommit` exits 0.
+
+- [x] On mount, `messages` are populated from the DB.
+- [x] On send, the user message is persisted before the streaming task starts.
+- [x] During streaming, the assistant message is upserted in the DB at most once per 250ms / 10 tokens.
+- [x] On `:stream_done`, a final write captures the complete buffer.
+- [x] "New conversation" button in the header rail clears messages and resets hero.
+- [x] Hard refresh of the page shows the same conversation (modulo the v1 session_id-on-mount limitation, documented in README).
+- [x] All ≥6 new tests pass.
+- [x] All previously-passing LiveView tests pass (existing tests use `:openai_module` stubs and don't touch the DB; ensure `Ecto.Adapters.SQL.Sandbox.checkout` is in `ConnCase`'s setup).
+- [x] `mix precommit` exits 0.
 
 **Edge Cases to Handle:**
+
 - LiveView crashes mid-stream — the assistant message in the DB is whatever the last debounced write captured; the next mount restores up to that point. Acceptable for v1; idempotent retries are F-10 in Sprint 16.
 - User submits message while DB write is in flight — the `is_sending` guard already prevents this.
 - DB is read-only / disk full — Repo raises; LiveView crashes; user sees the LiveView reconnect flash. Document.
 - A conversation has 10,000 messages — `list_messages/1` loads them all on mount. For v1 this is acceptable (no user will hit it). Pagination is a Sprint 17+ task.
 
 **Do NOT do:**
+
 - Do NOT add a "delete conversation" UX with confirmation in this task — keep "New" as a destructive overwrite per the audit.
 - Do NOT build the multi-conversation sidebar — F-3 in Sprint 16.
 - Do NOT add token-usage tracking — F-8 in Sprint 16.
@@ -396,6 +412,7 @@ The audit's F-2 specifies "must land before any public deployment." Option A (BA
     end
     ```
   - Define `auth_basic_when_configured/2` at the bottom of the module:
+
     ```elixir
     defp auth_basic_when_configured(conn, _opts) do
       user = Application.get_env(:chat_app, :basic_auth_user)
@@ -408,16 +425,20 @@ The audit's F-2 specifies "must land before any public deployment." Option A (BA
       end
     end
     ```
+
   - Update the `scope "/"` block to `pipe_through [:basic_auth, :browser]`.
 
 - `chat_app/config/runtime.exs`: in the prod block, add:
+
   ```elixir
   config :chat_app, :basic_auth_user, System.get_env("BASIC_AUTH_USER")
   config :chat_app, :basic_auth_password, System.get_env("BASIC_AUTH_PASSWORD")
   ```
+
   In `dev.exs`: do NOT set these — auth is bypassed when unset. In `test.exs`: do NOT set these.
 
 - `chat_app/.env.example`:
+
   ```
   # --- Recommended in prod for any non-localhost deploy ---
   # BASIC_AUTH_USER=admin
@@ -434,20 +455,23 @@ The audit's F-2 specifies "must land before any public deployment." Option A (BA
 - `chat_app/README.md`: add a "Production deployment" subsection explaining BASIC_AUTH_USER/PASSWORD as the v1 access gate, with a one-line `htpasswd -nB admin` style suggestion for generating a strong password (or `openssl rand -base64 32`).
 
 **Acceptance Criteria:**
-- [ ] `Plug.BasicAuth.basic_auth/2` is invoked only when both env vars are set and non-empty.
-- [ ] When unset (dev / test), the LiveView mounts without 401.
-- [ ] When set, requests without Authorization header receive 401.
-- [ ] When set, requests with correct credentials receive 200.
-- [ ] All 4 new tests pass.
-- [ ] No code outside `router.ex` and `runtime.exs` references basic auth.
-- [ ] `README.md` has the Production deployment section.
+
+- [x] `Plug.BasicAuth.basic_auth/2` is invoked only when both env vars are set and non-empty.
+- [x] When unset (dev / test), the LiveView mounts without 401.
+- [x] When set, requests without Authorization header receive 401.
+- [x] When set, requests with correct credentials receive 200.
+- [x] All 4 new tests pass.
+- [x] No code outside `router.ex` and `runtime.exs` references basic auth.
+- [x] `README.md` has the Production deployment section.
 
 **Edge Cases to Handle:**
+
 - Only one of the two env vars is set — auth is BYPASSED (the function checks both); the README must warn against this.
 - Constant-time comparison: `Plug.BasicAuth` already uses `Plug.Crypto.secure_compare/2` internally.
 - The auth flash interferes with the LiveView's flash group — it does not; `Plug.BasicAuth` returns 401 before LiveView mounts.
 
 **Do NOT do:**
+
 - Do NOT implement option B (magic-link email auth) — deferred indefinitely; v1 ships with shared-secret only.
 - Do NOT add a logout flow — basic auth doesn't have one in HTTP.
 - Do NOT add per-user accounts or roles.
@@ -467,7 +491,6 @@ With `Task.Supervisor` from Sprint 12 TASK 1, cancellation is implementable. "St
 **Exact Scope:**
 
 - `chat_app/lib/chat_app_web/live/chat_live.ex`:
-
   - Add `handle_event("stop_generation", _, socket)`:
     - If `socket.assigns.stream_task_pid` is alive: `Process.exit(pid, :shutdown)`.
     - Send a `{:stream_stopped}` self-message that sets `is_sending: false`, `stream_buffer: ""`, `stream_task_pid: nil`. The partial assistant message stays in `messages` (and in the DB from TASK 2).
@@ -485,6 +508,7 @@ With `Task.Supervisor` from Sprint 12 TASK 1, cancellation is implementable. "St
     - When the last message is `:assistant` AND `is_sending: false` AND there has been at least one user-assistant exchange, show a "Regenerate" button below the assistant bubble (or in the composer area as a secondary button).
 
 - `chat_app/lib/chat_app/conversations.ex`: add `delete_message/1`:
+
   ```elixir
   def delete_message(message_id) when is_integer(message_id) do
     Repo.get!(Message, message_id) |> Repo.delete!()
@@ -499,21 +523,24 @@ With `Task.Supervisor` from Sprint 12 TASK 1, cancellation is implementable. "St
   - `"regenerate triggers a new stream with the same prior user message"`.
 
 **Acceptance Criteria:**
-- [ ] "Stop" button visible only while `is_sending: true`.
-- [ ] "Regenerate" button visible only when the last message is assistant AND `is_sending: false`.
-- [ ] Clicking Stop terminates the supervised task and clears `is_sending`.
-- [ ] Clicking Regenerate drops the last assistant message (in memory and DB) and re-streams from the last user message.
-- [ ] Rate limit check applies to Regenerate.
-- [ ] All 5 new tests pass.
-- [ ] No layout shifts when the buttons appear/disappear (use `min-height` on their container).
+
+- [x] "Stop" button visible only while `is_sending: true`.
+- [x] "Regenerate" button visible only when the last message is assistant AND `is_sending: false`.
+- [x] Clicking Stop terminates the supervised task and clears `is_sending`.
+- [x] Clicking Regenerate drops the last assistant message (in memory and DB) and re-streams from the last user message.
+- [x] Rate limit check applies to Regenerate.
+- [x] All 5 new tests pass.
+- [x] No layout shifts when the buttons appear/disappear (use `min-height` on their container).
 
 **Edge Cases to Handle:**
+
 - Stop clicked after `:stream_done` has already arrived — `Process.alive?/1` returns false; no-op.
 - Regenerate clicked when the conversation has zero messages — early-return; no DB call.
 - Regenerate clicked when the last message is a user message (orphaned because of a prior stop without a rewrite) — drop the user message? For v1: NO. Treat orphaned user messages as immutable; Regenerate is a no-op in this case. Document.
 - The stopped task's last `:stream_token` arrives after `:stream_stopped` — handle in `handle_info({:stream_token, ...})` by checking `is_sending: false` and ignoring.
 
 **Do NOT do:**
+
 - Do NOT implement "edit and resend" — separate feature.
 - Do NOT implement infinite-retry — F-10 in Sprint 16.
 - Do NOT show a confirmation dialog for Stop or Regenerate.
@@ -571,21 +598,24 @@ Theme JS (`root.html.heex` lines 18-36) is wired to localStorage and `data-theme
 - `chat_app/test/chat_app_web/features/chat_e2e_test.exs`: add ONE Wallaby feature test that clicks the dark button and asserts `<html data-theme="dark">` is set (verifies the existing JS wiring still works end-to-end).
 
 **Acceptance Criteria:**
-- [ ] Three buttons render in the header rail with `data-phx-theme="system"|"light"|"dark"`.
-- [ ] Clicking each button dispatches `phx:set-theme` (verified by E2E test).
-- [ ] After clicking dark, `<html>` has `data-theme="dark"`.
-- [ ] After clicking system, `data-theme` attribute is removed from `<html>`.
-- [ ] localStorage `phx:theme` reflects the choice (existing JS handles this).
-- [ ] All 3 unit tests + 1 E2E test pass.
-- [ ] No new daisyUI classes are referenced.
-- [ ] `mix precommit` exits 0.
+
+- [x] Three buttons render in the header rail with `data-phx-theme="system"|"light"|"dark"`.
+- [x] Clicking each button dispatches `phx:set-theme` (verified by E2E test).
+- [x] After clicking dark, `<html>` has `data-theme="dark"`.
+- [x] After clicking system, `data-theme` attribute is removed from `<html>`.
+- [x] localStorage `phx:theme` reflects the choice (existing JS handles this).
+- [x] All 3 unit tests + 1 E2E test pass.
+- [x] No new daisyUI classes are referenced.
+- [x] `mix precommit` exits 0.
 
 **Edge Cases to Handle:**
+
 - User has prior `localStorage.phx:theme = "dark"` — page loads in dark mode (existing JS handles this on initial render); the toggle UI is purely additive.
 - Theme buttons clicked before WebSocket connect — `JS.dispatch` works regardless of LiveView connection state; verified.
 - Touch devices — buttons are 24×24 px which is below the 44px iOS guideline. For v1 acceptable; mobile polish is a follow-up.
 
 **Do NOT do:**
+
 - Do NOT bring back `Layouts.theme_toggle/1` (deleted in Sprint 12).
 - Do NOT persist theme on the server — localStorage is the source of truth.
 - Do NOT add an auto-detect-OS-changes listener beyond what `root.html.heex` already wires.
@@ -615,20 +645,23 @@ Theme JS (`root.html.heex` lines 18-36) is wired to localStorage and `data-theme
 - **Regenerate without a prior user message** edge case (TASK 4): documented as a no-op; the UX is "do nothing." Confirm with product if a different behavior is desired.
 
 ## DEFINITION OF DONE — SPRINT COMPLETE WHEN:
-- [ ] All five tasks pass their acceptance criteria.
-- [ ] `mix precommit` exits 0.
-- [ ] `cd assets && npm test` exits 0.
-- [ ] `mix test --exclude real_api` exits 0.
-- [ ] CI (`.github/workflows/ci.yml`) is green on a final PR.
-- [ ] A user can: refresh the page mid-conversation and see all prior messages; click "+ New" and start fresh; click Stop while streaming; click Regenerate after a response; switch themes from the header.
-- [ ] `README.md` documents `DATABASE_PATH`, `BASIC_AUTH_USER`, `BASIC_AUTH_PASSWORD`, and the production deployment subsection.
-- [ ] `CHANGELOG.md` `[Unreleased]` documents this sprint's `### Added`, `### Changed`, `### Security` blocks.
-- [ ] QA audit prompt has been run and verdict is SHIP or SHIP WITH FIXES.
+
+- [x] All five tasks pass their acceptance criteria.
+- [x] `mix precommit` exits 0.
+- [x] `cd assets && npm test` exits 0.
+- [x] `mix test --exclude real_api` exits 0.
+- [x] CI (`.github/workflows/ci.yml`) is green on a final PR.
+- [x] A user can: refresh the page mid-conversation and see all prior messages; click "+ New" and start fresh; click Stop while streaming; click Regenerate after a response; switch themes from the header.
+- [x] `README.md` documents `DATABASE_PATH`, `BASIC_AUTH_USER`, `BASIC_AUTH_PASSWORD`, and the production deployment subsection.
+- [x] `CHANGELOG.md` `[Unreleased]` documents this sprint's `### Added`, `### Changed`, `### Security` blocks.
+- [x] QA audit prompt has been run and verdict is SHIP or SHIP WITH FIXES.
 
 ---
 
 ## QA Verdict
+
 TBD
 
 ## Completion Notes
+
 TBD

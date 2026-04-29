@@ -173,24 +173,46 @@ defmodule ChatAppWeb.Sprint13HardeningArchitectureIntegrationTest do
   end
 
   test "dev boot raises an instructive error when no .env and no OPENAI_API_KEY" do
-    _ = File.rm(".env")
+    env_path = Path.expand(".env", File.cwd!())
+    backup_path = env_path <> ".test_backup"
 
-    {output, status} =
-      System.cmd(
-        "env",
-        [
-          "-u",
-          "OPENAI_API_KEY",
-          "MIX_ENV=dev",
-          "mix",
-          "run",
-          "-e",
-          "IO.puts(\"booted\")"
-        ],
-        stderr_to_stdout: true
-      )
+    if File.exists?(backup_path), do: File.rm!(backup_path)
 
-    assert status != 0
-    assert output =~ "cp .env.example .env"
+    had_env? = File.exists?(env_path)
+
+    if had_env? do
+      File.rename!(env_path, backup_path)
+    else
+      _ = File.rm(env_path)
+    end
+
+    try do
+      {output, status} =
+        System.cmd(
+          "env",
+          [
+            "-u",
+            "OPENAI_API_KEY",
+            "MIX_ENV=dev",
+            "mix",
+            "run",
+            "-e",
+            "IO.puts(\"booted\")"
+          ],
+          stderr_to_stdout: true
+        )
+
+      assert status != 0
+      assert output =~ "cp .env.example .env"
+    after
+      # Ensure the developer's real .env is never deleted by test runs.
+      if had_env? do
+        _ = File.rm(env_path)
+        File.rename!(backup_path, env_path)
+      else
+        _ = File.rm(env_path)
+        _ = File.rm(backup_path)
+      end
+    end
   end
 end

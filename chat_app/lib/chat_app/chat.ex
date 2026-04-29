@@ -28,4 +28,13 @@ defmodule ChatApp.Chat do
         end
     end
   end
+
+  @doc """
+  Formats integer cents as dollars with two decimals.
+  """
+  def cents_to_dollars(cents) when is_integer(cents) and cents >= 0 do
+    dollars = div(cents, 100)
+    remainder = rem(cents, 100) |> Integer.to_string() |> String.pad_leading(2, "0")
+    "$#{dollars}.#{remainder}"
+  end
 end

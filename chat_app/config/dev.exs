@@ -93,3 +93,8 @@ config :phoenix_live_view,
   debug_attributes: true,
   # Enable helpful, but potentially expensive runtime checks
   enable_expensive_runtime_checks: true
+
+config :chat_app, ChatApp.Repo,
+  database: Path.expand("../priv/repo/chat_app_dev.db", __DIR__),
+  pool_size: 5,
+  show_sensitive_data_on_connection_error: true

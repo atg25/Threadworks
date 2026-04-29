@@ -65,6 +65,18 @@ defmodule ChatAppWeb.ChatLiveEventsTest do
     assert has_element?(view, "[data-homepage-chat-intro]")
   end
 
+  test "new conversation remounts hero landing state", %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/")
+
+    assert render(view) =~ ~s(id="hero-landing-0")
+
+    view
+    |> element("button[data-new-chat-trigger='true']")
+    |> render_click()
+
+    assert render(view) =~ ~s(id="hero-landing-1")
+  end
+
   # ── Guard: double-send while is_sending ───────────────────────
 
   test "second send while is_sending is ignored", %{conn: conn} do
@@ -182,4 +194,26 @@ defmodule ChatAppWeb.ChatLiveEventsTest do
     html = render(view)
     refute html =~ "animate-pulse"
   end
+
+  test "regenerate button is hidden on initial mount", %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/")
+    refute has_element?(view, "button[phx-click='regenerate']")
+  end
+
+  test "regenerate button is hidden while is_sending and visible after stream_done", %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/")
+
+    view |> element("form") |> render_submit(%{"input" => "Q"})
+    assert live_assigns(view).is_sending == true
+    refute has_element?(view, "button[phx-click='regenerate']")
+
+    pid = view.pid
+    send(pid, {:stream_token, "A"})
+    send(pid, :stream_done)
+
+    assert live_assigns(view).is_sending == false
+    assert has_element?(view, "button[phx-click='regenerate']")
+  end
+
+  defp live_assigns(view), do: :sys.get_state(view.pid).socket.assigns
 end

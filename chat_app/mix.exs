@@ -55,12 +55,14 @@ defmodule ChatApp.MixProject do
       {:hammer, "~> 6.2"},
       {:dotenvy, "~> 0.8", only: :dev},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
+      {:ecto_sql, "~> 3.10"},
+      {:ecto_sqlite3, "~> 0.13"},
       {:dns_cluster, "~> 0.2.0"},
       {:gettext, "~> 1.0"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:ex_doc, "~> 0.31", only: [:dev, :test], runtime: false},
-      {:floki, ">= 0.30.0", only: :test},
+      {:floki, ">= 0.30.0"},
       {:bypass, github: "PSPDFKit-labs/bypass", only: :test},
       {:wallaby, "~> 0.30", runtime: false, only: :test}
     ]
@@ -74,7 +76,8 @@ defmodule ChatApp.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get", "assets.setup", "assets.build"],
+      setup: ["deps.get", "ecto.create", "ecto.migrate", "assets.setup", "assets.build"],
+      "test.setup": ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["compile", "tailwind chat_app", "esbuild chat_app"],
       "assets.deploy": [

@@ -56,7 +56,7 @@ SPRINT-11 closed the highest-priority audit items in the “immediate fixes A”
 - **IF-4 / §17 C-4:** Global `config :chat_app, :openai_model, "gpt-4o"` and `ChatApp.OpenAI` reads it for the request body (per-conversation overrides remain SPRINT-15/16).
 - **IF-7 / §17 D-2:** Composer uses a paired `<textarea><%= @input %></textarea>` (valid HTML).
 
-**Remaining Phase 2:** SPRINT-15–16 (planned, `docs/sprints/planned/`). SPRINT-13 and SPRINT-14 have been completed. See `docs/sprints/README.md`.
+**Phase 2 complete:** All 6 sprints (SPRINT-11 to SPRINT-16) have been completed. See `docs/sprints/README.md`.
 
 ### 0.5 Phase 2 — SPRINT-12 completion (2026-04-25)
 
@@ -67,7 +67,18 @@ SPRINT-12 closed the “immediate fixes B: resilience & cleanup” items:
 - **IF-5 (rate limit):** Hammer `~> 6.2` with per-session keying and user-visible “slow down” behavior.
 - **IF-9 (scaffold):** `PageController` / `PageHTML` scaffold and unused `CoreComponents` / `theme_toggle` removed per task scope; `/page` is unmapped (404).
 
-**Phase 2 is not complete:** 4 of 6 sprints done (SPRINT-11, 12, 13, 14 complete); SPRINT-15–16 are planned — see `docs/sprints/README.md`.
+**Phase 2 progress:** 6 of 6 sprints done (SPRINT-11, 12, 13, 14, 15, 16 complete).
+
+### 0.6 Phase 2 — SPRINT-15 completion (2026-04-27)
+
+SPRINT-15 delivered the largest "demo → product" gap: persistent conversation state and basic auth for non-localhost deploys.
+
+- **F-1 (SQLite + Ecto):** `ChatApp.Repo` + `Ecto.Sqlite3`; `ChatApp.Conversations` context with `get_or_create/1`, `append_message/3`, `update_assistant_message/2`, cascade delete; migration with unique session_id index. Conversation and message rows survive page reload, LiveView crashes, and server restarts (single-node deployment only).
+- **H-2 (Basic Auth):** `Plug.BasicAuth` in router pipeline, gated by `BASIC_AUTH_USER` + `BASIC_AUTH_PASSWORD` env vars (prod only; dev/test left open by default). Constant-time password comparison via `Plug.Crypto.secure_compare/2`.
+- **TASK 4 (Stop/Regenerate):** User can click "Stop" to kill mid-stream generation; partial assistant text persists in DB and UI. User can click "Regenerate" to re-stream the last user message; the prior assistant message is deleted and a new one is streamed in. Regenerate while streaming is a no-op (prevents racing tasks).
+- **TASK 5 (Theme UI):** Sprint 15 introduced persisted theme selection; a later Phase 3 ad-hoc UI pass replaced the original system/light/dark buttons with four named themes (`editorial`, `swiss`, `mid-century`, `techno-brutalist`) backed by `data-theme` + `localStorage`. All theme buttons have non-empty `aria-label`.
+
+**Phase 2 is fully complete:** 6 of 6 sprints done. (Delivered sidebar, settings drawer, usage records, code-block UI, and retries).
 
 ---
 
@@ -1043,3 +1054,106 @@ Items that are NOT yet drift but **will become drift** as soon as the listed Pha
 - **Reuses** the §1–§6 design surface unchanged — the visual UX is correct and shipped.
 
 Until spec-2 is written, treat the planned sprint files (`docs/sprints/planned/SPRINT-14..16-*.md`), the **SPRINT-13** active record (`docs/sprints/active/SPRINT-13-hardening-architecture.md`), and the completed Phase 2 records (**SPRINT-11** and **SPRINT-12** in `docs/sprints/complete/`) as the de-facto target. They each cite the spec section they touch, so the gap is recoverable, but it is not yet a single navigable document.
+
+---
+
+## 18. Phase 3: UI Polish and Rebranding
+
+### 18.1 Ad-hoc baseline update (2026-04-28)
+
+The current UI no longer matches the original Phase 3 plan exactly because a manual polish pass shipped after SP-03-18 closed. These behaviors are now canonical and future Phase 3 work must preserve them:
+
+- Desktop sidebar is collapsible and starts collapsed by default.
+- Header text pills are gone; the current controls are a left hamburger toggle, a square `hero-pencil-square` new-chat button, and a right settings gear.
+- The transient top model strip and API cost card were removed from the header/chat chrome.
+- The named 4-theme selector is functional and persists through `data-theme` on `<html>` plus `localStorage`.
+- The new-chat hero landing animation is intentionally more visible than the original sprint plan.
+- The footer is now a larger professional section that lives below the initial chat viewport and is reached by scrolling a dedicated page shell.
+
+Treat the items above as existing scope. Remaining sprint work should harden, test, and extend them rather than reintroducing the older UI.
+
+**Branding Direction:**
+- **App Name:** Threadworks AI
+- **Design:** Elegant and editorial, unapologetically unique. Retain existing colors and fonts, ensuring proper contrast ratios, hover/action states, and readability.
+- **Key UX Updates:**
+  - Make the side panel with chats collapsible.
+  - Remove the unnecessary API cost window below the header.
+  - Move "+ New" and "Settings" actions to corners and convert them to icons.
+  - Fix the theme selector to seamlessly switch between 4 distinct styles: Editorial (default), Swiss, Mid-Century Modern, and Techno-Brutalist.
+  - Remove unnecessary up and down arrows (feedback) from message bubbles.
+  - Add a footer section (product info, about the author, how it works, use cases, settings link, GitHub link, and contact form).
+
+### SPRINT-17: Branding + Naming
+**Goal:** Update all name, color, and identity references globally to establish the "Threadworks AI" brand.
+**Deliverables:**
+- Global renaming to "Threadworks AI" in HTML titles, wordmarks, and documentation.
+- Validated and adjusted color variables in `foundation.css` to guarantee WCAG-compliant contrast ratios.
+- Implementation of a footer for project identity. The original footer shipped in SP-03-17, and the current shipped variant is a larger below-the-fold author/project/link section rendered outside the initial chat viewport.
+**Acceptance Criteria:**
+- The page `<title>` and main `<p class="brand-wordmark">` render "Threadworks AI".
+- The footer remains below the initial chat viewport and becomes visible only after scrolling the page shell.
+- The shipped footer presents author/project copy plus LinkedIn, GitHub, and Portfolio link cards with visible hover/focus affordances.
+**Complexity:** Low
+**Risks:** Footer placement and page-shell scrolling must not regress transcript/composer layout on mobile devices.
+
+### SPRINT-18: Bug Fixes
+**Goal:** Address all issues identified in the "BROKEN / BUGGY" section of the audit.
+**Deliverables:**
+- Fixed composer textarea overflow.
+- Corrected Tailwind opacity modifiers in flash components.
+- Integrated error states into the semantic design system.
+- Correct z-index stacking for header and sidebar.
+**Acceptance Criteria:**
+- The `<textarea>` in `chat_live.ex` scrolls vertically when content exceeds `192px` in height (using `overflow-y: auto`).
+- Flash messages in `core_components.ex` use valid Tailwind syntax (`bg-[var(--status-error)]` without arbitrary `/` modifiers unless properly configured).
+- Stream retry and rate limit alerts use `--status-error` and `--status-success` colors instead of hardcoded `red-500` or `emerald-500`.
+- The sidebar correctly stacks beneath or alongside the header without z-index collisions (header uses `z-20`, sidebar uses `z-10` or a consistent layout).
+**Complexity:** Low
+**Risks:** Fixing overflow might introduce mobile layout shifts if not tested on iOS Safari.
+
+### SPRINT-19: Component Polish
+**Goal:** Improve `core_components.ex` and shared UI elements based on the audit's "IMPROVEMENT OPPORTUNITIES".
+**Deliverables:**
+- Migration of generic buttons to semantic utility classes.
+- Replacement of raw text symbols with Heroicons.
+- Tailwind Typography (`.prose`) color override for seamless dark mode support.
+**Acceptance Criteria:**
+- The "Regenerate" and "Copy" buttons use `icon-btn` styles, incorporating SVG Heroicons (`hero-arrow-path`, `hero-clipboard`), with `8px` padding, a `150ms` background transition, and an active scale-down effect.
+- Sidebar "Rename" and "Delete" actions use `<.icon name="hero-pencil" />` and `<.icon name="hero-trash" />`.
+- Markdown output inside `.ui-chat-message-assistant` inherits the parent text color (using `prose-p:text-inherit` or equivalent) across all themes.
+**Complexity:** Medium
+**Risks:** Overriding `.prose` globally might break specific markdown formatting (like inline code blocks) if not scoped carefully.
+
+### SPRINT-20: Page-by-Page Polish
+**Goal:** Harden and extend the structural UX improvements that are already partially shipped in the current app shell.
+
+**Sprint repo mapping:** **SP-03-19A** (closed 2026-04-29, [`../../sprints/complete/SP-03-19A-desktop-layout.md`](../../sprints/complete/SP-03-19A-desktop-layout.md)) delivered automated regression and hardening for the default-collapsed desktop sidebar, header icon accessibility, absence of `data-usage-cost` / top model chrome, and page-shell/footer scroll invariants. Remaining items in this section (e.g. mobile drawer via **SP-03-19B**, theme-engine work via **SP-03-20**) are tracked in [`../../sprints/README.md`](../../sprints/README.md) and [`../../phases/phase-3.md`](../../phases/phase-3.md).
+
+**Already done ad-hoc:** Desktop sidebar collapse, default-collapsed desktop state, header icon-only controls, removal of the top model strip and API cost card, a working 4-theme selector, the square pencil new-chat control, and the stronger hero landing animation are already live.
+**Deliverables:**
+- Regression coverage and layout hardening for the shipped collapsible sidebar component.
+- Preserve removal of the top model strip and API cost tracker.
+- Preserve and polish the shipped header icon controls (`hero-bars-3`, `hero-pencil-square`, `hero-cog-6-tooth`) rather than replacing them.
+- Preserve and harden the shipped multi-theme selector bridging the UI and the design system themes.
+- Preserve the dedicated page-shell scroll behavior that keeps the larger footer below the initial viewport.
+**Acceptance Criteria:**
+- The sidebar remains collapsed by default on desktop and still toggles via the header `hero-bars-3` control.
+- No `data-usage-cost` element or top model badge is reintroduced.
+- The header remains icon-led and retains the shipped square pencil new-chat control plus right-side settings gear.
+- The theme toggle buttons continue to apply `"editorial"`, `"swiss"`, `"mid-century"`, and `"techno-brutalist"` data attributes to the `<html>` element and update `localStorage` across reloads and LiveView patches.
+- The footer remains below fold and is reached by scrolling the page shell rather than by restoring the old root/body overflow lock.
+**Complexity:** High
+**Risks:** The remaining risk is not feature absence but accidental regression while refactoring layout, breakpoints, or theme plumbing.
+
+### SPRINT-21: Empty / Loading / Error States
+**Goal:** Make every transient state intentional, branded, and polished.
+**Deliverables:**
+- Premium skeleton loader or branded animation for the assistant's "thinking" state.
+- Branded empty states for the sidebar (when no conversations exist).
+- Properly formatted and padded UI alerts for configuration success/errors.
+**Acceptance Criteria:**
+- The typing indicator is replaced with a refined animation (e.g., a pulsing brand mark or a skeleton text block) rather than default `bg-accent-interactive` dots.
+- A "No conversations yet" placeholder message appears in the sidebar when empty, styled with `text-foreground/50` and an illustrative SVG.
+- "Settings saved" notifications utilize a `.alert-success` utility class with `12px` padding, border radius, and a subtle background tint, avoiding raw text blocks.
+**Complexity:** Medium
+**Risks:** Complex loading animations can cause high CPU usage or frame drops if not implemented with GPU-accelerated CSS properties.

@@ -25,14 +25,37 @@ import { LiveSocket } from "phoenix_live_view";
 import topbar from "../vendor/topbar";
 import ChatScroll from "./hooks/ChatScroll";
 import ChatComposer from "./hooks/ChatComposer";
+import PromptOnEvent from "./hooks/PromptOnEvent";
+import "./hooks/Clipboard";
+import { initThemeController } from "./theme";
+
+initThemeController();
 
 const csrfToken = document
   .querySelector("meta[name='csrf-token']")
   .getAttribute("content");
+
+const sessionIdKey = "chat_app:session_id";
+
+const ensureSessionId = () => {
+  const existing = window.sessionStorage.getItem(sessionIdKey);
+
+  if (existing && existing.length > 0) {
+    return existing;
+  }
+
+  const generated =
+    window.crypto?.randomUUID?.() ||
+    `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  window.sessionStorage.setItem(sessionIdKey, generated);
+  return generated;
+};
+
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  params: { _csrf_token: csrfToken },
-  hooks: { ChatScroll, ChatComposer },
+  params: () => ({ _csrf_token: csrfToken, session_id: ensureSessionId() }),
+  hooks: { ChatScroll, ChatComposer, PromptOnEvent },
 });
 
 // Show progress bar on live navigation and form submits

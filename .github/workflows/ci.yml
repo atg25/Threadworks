@@ -36,7 +36,7 @@ jobs:
 
       - run: mix deps.get
       - run: mix compile --warnings-as-errors
-      - run: mix test --exclude real_api --exclude e2e
+      - run: mix test.setup --exclude real_api --exclude e2e
 
       - uses: actions/setup-node@v4
         with:

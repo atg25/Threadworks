@@ -11,6 +11,8 @@ config :chat_app,
   # Used by Ecto generators (mix phx.gen.schema, etc.) once Sprint 15's persistence layer lands.
   generators: [timestamp_type: :utc_datetime]
 
+config :chat_app, ecto_repos: [ChatApp.Repo]
+
 config :chat_app, :openai_model, "gpt-4o"
 
 config :hammer,

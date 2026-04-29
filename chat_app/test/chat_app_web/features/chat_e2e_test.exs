@@ -40,16 +40,16 @@ defmodule ChatAppWeb.ChatE2ETest do
     assert_has(session, css("body[data-test-title='set']"))
   end
 
-  feature "body does not have a vertical scrollbar (overflow hidden)", %{session: session} do
+  feature "body remains vertically scrollable instead of globally locked", %{session: session} do
     session = visit(session, "/")
 
     session =
       execute_script(session, """
         document.body.setAttribute('data-test-overflow',
-          getComputedStyle(document.body).overflow)
+          getComputedStyle(document.body).overflowY)
       """)
 
-    assert_has(session, css("body[data-test-overflow*='hidden']"))
+    assert_has(session, css("body[data-test-overflow='auto']"))
   end
 
   feature "section fills the full viewport height", %{session: session} do
@@ -57,13 +57,15 @@ defmodule ChatAppWeb.ChatE2ETest do
     # Allow up to 8px tolerance for sub-pixel rounding in headless Chrome.
     session =
       execute_script(session, """
-        const section = document.querySelector('[data-chat-surface]');
-        const diff = Math.abs(section.getBoundingClientRect().height - window.innerHeight);
-        section.setAttribute('data-test-height-diff', diff.toFixed(1));
-        section.setAttribute('data-test-height-ok', diff < 8 ? 'true' : 'false');
+        const shell = document.querySelector('[data-page-shell]');
+        const shellHeight = shell ? shell.getBoundingClientRect().height : 0;
+        const viewportHeight = window.innerHeight || 0;
+        const diff = Math.abs(shellHeight - viewportHeight);
+        shell?.setAttribute('data-test-height-diff', diff.toFixed(1));
+        shell?.setAttribute('data-test-height-ok', diff < 8 ? 'true' : 'false');
       """)
 
-    assert_has(session, css("[data-chat-surface][data-test-height-ok='true']"))
+    assert_has(session, css("[data-page-shell][data-test-height-ok='true']"))
   end
 
   # ── Font loading ──────────────────────────────────────────────
@@ -342,5 +344,81 @@ defmodule ChatAppWeb.ChatE2ETest do
     session
     |> visit("/")
     |> assert_has(css(".ui-chat-composer-frame"))
+  end
+
+  # ── Sprint 15: persistence + controls + theme ────────────────
+
+  feature "refresh restores conversation", %{session: session} do
+    session =
+      session
+      |> visit("/")
+      |> type_and_submit("hello")
+      |> assert_has(css("[data-role='user']", text: "hello"))
+      |> assert_has(css("[data-role='assistant']", text: "Stub response."))
+
+    session = visit(session, "/")
+
+    session
+    |> assert_has(css("[data-role='user']", text: "hello"))
+    |> assert_has(css("[data-role='assistant']", text: "Stub response."))
+    |> refute_has(css("[data-homepage-chat-intro]"))
+  end
+
+  feature "theme toggle survives reload", %{session: session} do
+    session = visit(session, "/")
+
+    session =
+      session
+      |> click(css("button[data-phx-theme='swiss']"))
+      |> execute_script(
+        "document.documentElement.setAttribute('data-test-theme', document.documentElement.dataset.theme || '')"
+      )
+
+    session = assert_has(session, css("html[data-test-theme='swiss']"))
+
+    session =
+      session
+      |> visit("/")
+      |> execute_script(
+        "document.documentElement.setAttribute('data-test-theme', document.documentElement.dataset.theme || '')"
+      )
+
+    session = assert_has(session, css("html[data-test-theme='swiss']"))
+
+    session =
+      session
+      |> click(css("button[data-phx-theme='editorial']"))
+      |> execute_script(
+        "document.documentElement.setAttribute('data-test-theme', document.documentElement.dataset.theme || '')"
+      )
+
+    assert_has(session, css("html[data-test-theme='editorial']"))
+  end
+
+  feature "Stop cancels mid-stream and partial assistant persists across reload", %{
+    session: session
+  } do
+    session =
+      session
+      |> visit("/")
+      # E2EStub slows down when the prompt contains "stream me".
+      |> type_and_submit("stream me please")
+
+    session = assert_has(session, css("button[aria-label='Stop generation']"))
+    session = assert_has(session, css("[data-role='assistant']", text: "Stub"))
+
+    session =
+      session
+      |> click(css("button[aria-label='Stop generation']"))
+      |> assert_has(css("button[aria-label='Send message']"))
+
+    Process.sleep(650)
+    session = refute_has(session, css("[data-role='assistant']", text: "response."))
+
+    session = visit(session, "/")
+
+    session
+    |> assert_has(css("[data-role='assistant']", text: "Stub"))
+    |> refute_has(css("[data-role='assistant']", text: "response."))
   end
 end

@@ -1,5 +1,13 @@
 ExUnit.start(exclude: [:real_api])
 
+Ecto.Adapters.SQL.Sandbox.mode(ChatApp.Repo, :manual)
+Code.ensure_loaded(ChatApp.Conversations)
+Code.ensure_loaded(ChatApp.Conversations.Conversation)
+Code.ensure_loaded(ChatApp.Conversations.Message)
+Code.ensure_loaded(ChatAppWeb.Router)
+Code.ensure_loaded(ChatApp.Chat)
+Code.ensure_loaded(ChatAppWeb.ChatLive)
+
 excluded_tags =
   ExUnit.configuration()[:exclude]
   |> List.wrap()

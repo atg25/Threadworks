@@ -40,7 +40,7 @@ defmodule ChatAppWeb.Layouts do
 
   def app(assigns) do
     ~H"""
-    <main class="h-full w-full overflow-hidden" style="height:100%;">
+    <main class="min-h-screen w-full overflow-x-hidden" style="min-height:100%;">
       {render_slot(@inner_block)}
     </main>
 
