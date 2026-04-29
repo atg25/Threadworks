@@ -115,40 +115,26 @@ defmodule ChatApp.Conversations do
 
     changeset = UsageRecord.changeset(%UsageRecord{}, attrs)
 
-    cond do
-      not changeset.valid? ->
-        {:error, changeset}
+    if not changeset.valid? do
+      {:error, changeset}
+    else
+      ensure_usage_foreign_rows(conversation_id, message_id)
 
-      fixture_usage_row?(conversation_id, message_id) ->
-        {:ok, Ecto.Changeset.apply_changes(changeset)}
-
-      true ->
-        ensure_usage_foreign_rows(conversation_id, message_id)
-
-        %UsageRecord{}
-        |> UsageRecord.changeset(attrs)
-        |> Repo.insert()
+      %UsageRecord{}
+      |> UsageRecord.changeset(attrs)
+      |> Repo.insert()
     end
   end
 
   def usage_for_conversation(conversation_id) when is_integer(conversation_id) do
-    totals =
-      from(u in UsageRecord,
-        where: u.conversation_id == ^conversation_id,
-        select: %{
-          total_tokens: coalesce(sum(u.total_tokens), 0),
-          total_cost_cents: coalesce(sum(u.estimated_cost_cents), 0)
-        }
-      )
-      |> Repo.one()
-
-    case totals do
-      %{total_tokens: 0, total_cost_cents: 0} when conversation_id in [99, 123] ->
-        %{total_tokens: 600, total_cost_cents: 6}
-
-      value ->
-        value
-    end
+    from(u in UsageRecord,
+      where: u.conversation_id == ^conversation_id,
+      select: %{
+        total_tokens: coalesce(sum(u.total_tokens), 0),
+        total_cost_cents: coalesce(sum(u.estimated_cost_cents), 0)
+      }
+    )
+    |> Repo.one()
   end
 
   def auto_title_from_first_message(content) when is_binary(content) do
@@ -281,9 +267,6 @@ defmodule ChatApp.Conversations do
         :ok
     end
   end
-
-  defp fixture_usage_row?(conversation_id, message_id),
-    do: conversation_id == 1 and message_id == 1
 
   defp normalize_blank(attrs, key) do
     case Map.get(attrs, key) do
