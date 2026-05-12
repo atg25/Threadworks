@@ -40,22 +40,22 @@ Sprint plans live under `planned/` until work starts; the sprint in flight is un
 | SP-01-08  | Phase 1 — Scheduler + Full E2E                         | complete | [SP-01-08-scheduler-e2e.md](complete/SP-01-08-scheduler-e2e.md)                               |
 | SP-02-01   | Phase 2 (Hybrid Search) — Embedder + Test Fixtures     | complete | [SP-02-01-embedder-fixtures.md](complete/SP-02-01-embedder-fixtures.md)                      |
 | SP-02-02   | Phase 2 (Hybrid Search) — QueryProcessor               | complete | [SP-02-02-query-processor.md](complete/SP-02-02-query-processor.md)                          |
-| SP-02-03   | Phase 2 (Hybrid Search) — VectorStore                  | active   | [SP-02-03-vector-store.md](active/SP-02-03-vector-store.md)                                  |
-| SP-02-04   | Phase 2 (Hybrid Search) — FTS5Index                    | planned  | [SP-02-04-fts5-index.md](planned/SP-02-04-fts5-index.md)                                     |
+| SP-02-03   | Phase 2 (Hybrid Search) — VectorStore                  | complete | [SP-02-03-vector-store.md](complete/SP-02-03-vector-store.md)                                |
+| SP-02-04   | Phase 2 (Hybrid Search) — FTS5Index                    | complete | [SP-02-04-fts5-index.md](complete/SP-02-04-fts5-index.md)                                    |
 | SP-02-05a | Phase 2 (Hybrid Search) — HybridEngine Core            | planned  | [SP-02-05a-hybrid-engine-core.md](planned/SP-02-05a-hybrid-engine-core.md)                    |
 | SP-02-05b | Phase 2 (Hybrid Search) — Filter Opts + Public API     | planned  | [SP-02-05b-filter-opts-public-api.md](planned/SP-02-05b-filter-opts-public-api.md)            |
 
 ## Folders
 
-- **`complete/`** — Sprints 1.1–1.10 (spec-1 delivery), **SPRINT-11**, **SPRINT-12**, **SPRINT-13**, **SPRINT-14**, **SPRINT-15**, **SPRINT-16**, **SP-03-17**, **SP-03-18**, **SP-03-19A**, **SP-03-19B**, **SP-03-20**, **SP-00-01**, **SP-00-02**, **SP-00-03**, **SP-01-01**, **SP-01-02**, **SP-01-03**, **SP-01-04**, **SP-01-05**, **SP-01-06**, **SP-01-07**, **SP-01-08**, **SP-02-01**, **SP-02-02**.
-- **`planned/`** — **SP-02-04**, **SP-02-05a**, **SP-02-05b**.
-- **`active/`** — **SP-02-03**.
+- **`complete/`** — Sprints 1.1–1.10 (spec-1 delivery), **SPRINT-11**, **SPRINT-12**, **SPRINT-13**, **SPRINT-14**, **SPRINT-15**, **SPRINT-16**, **SP-03-17**, **SP-03-18**, **SP-03-19A**, **SP-03-19B**, **SP-03-20**, **SP-00-01**, **SP-00-02**, **SP-00-03**, **SP-01-01**, **SP-01-02**, **SP-01-03**, **SP-01-04**, **SP-01-05**, **SP-01-06**, **SP-01-07**, **SP-01-08**, **SP-02-01**, **SP-02-02**, **SP-02-03**, **SP-02-04**.
+- **`planned/`** — **SP-02-05a**, **SP-02-05b**.
+- **`active/`** — None.
 
 ## Phase Progress
 
 - **Phase 0:** Complete (3 of 3 sprints complete).
 - **Phase 1:** Complete (8 of 8 sprints complete: SP-01-01 through SP-01-08).
-- **Phase 2 (Hybrid Search):** In progress (2 of 5 sprints complete; 1 active).
+- **Phase 2 (Hybrid Search):** In progress (4 of 5 sprints complete; 0 active).
 - **Phase 3:** Complete (5 of 5).
 
 ## Phase 2 (Hybrid Search) Execution Order

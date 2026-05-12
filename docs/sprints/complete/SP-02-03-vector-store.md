@@ -2,9 +2,10 @@
 id: SP-02-03
 phase: 2
 slug: vector-store
-status: active
+status: complete
 created: 2026-05-11
 activated_date: 2026-05-11
+completed_date: 2026-05-12
 depends_on:
   - SP-02-01  # test/fixtures/embeddings.exs must be committed
 estimated_days: 1.5
@@ -161,6 +162,44 @@ estimated_days: 1.5
 
 ---
 
+## QA Review (2026-05-12)
+
+All 16 sprint tests passed on first run. One major issue was identified and fixed; two minor issues were noted for future work.
+
+### Fixed — MAJOR: No transaction wrapping DELETE+INSERT in `upsert/2`
+
+**File:** `lib/chat_app/search/vector_store.ex`, `upsert/2`
+
+**Problem:** The DELETE and INSERT were issued as two separate auto-commit statements. In production (no outer sandbox transaction), a failed INSERT after a successful DELETE permanently removes the item's vector from the index with no replacement. This creates silent data loss: the item becomes unsearchable but no error is surfaced to callers after the fact.
+
+**Fix applied 2026-05-12:** The two statements are now wrapped in `Repo.transaction/1`. If the INSERT raises, the transaction rolls back and the DELETE is reverted. In the DataCase sandbox (test mode) this becomes a savepoint within the outer test transaction — behavior is unchanged and all 16 tests remain green.
+
+### Outstanding — MINOR: EmbedWorker duplicates VectorStore.upsert logic
+
+**File:** `lib/chat_app/etl/workers/embed_worker.ex`, `embed_and_store/1` (lines 37–43)
+
+**Problem:** EmbedWorker performs its own raw `DELETE + INSERT` against `clothing_vec` instead of calling `VectorStore.upsert/2`. It therefore does not benefit from the transaction fix above, and any future changes to the upsert strategy must be applied in two places.
+
+**When to fix:** During SP-02-05a (HybridEngine) or a dedicated ETL hardening sprint. Replace the inline `Repo.query!` DELETE+INSERT block in `embed_and_store/1` with a single call to `VectorStore.upsert(item.id, embedding)`. Add or update EmbedWorker test 4 to verify the `clothing_vec` row count after the refactor. See SP-01-07 known-issues note.
+
+### Outstanding — MINOR: T-06 uses only two distinct vectors for ten items
+
+**File:** `test/unit/search/vector_store_test.exs`, T-06
+
+**Problem:** The spec says "upsert 10 distinct items with fixture vectors" but the test alternates between `fixture_a` and `fixture_b`, so five item pairs share an identical vector. The LIMIT behavior is correctly tested; this is a test-thoroughness gap only. Adding `fixture_c` as a third alternating vector would make the test strictly match the spec wording.
+
+**When to fix:** Low priority. Can be addressed in any future test-quality pass; no functional risk.
+
+### Outstanding — MINOR: I-02 uses bare destructuring instead of assertions
+
+**File:** `test/integration/search/vector_store_test.exs`, I-02
+
+**Problem:** `[{first_id, _} | [{second_id, _} | _]] = VectorStore.search(...)` raises `MatchError` (not a labelled assertion failure) if search returns fewer than 2 results, making the failure harder to diagnose. Prefer `assert length(result) >= 2` before destructuring.
+
+**When to fix:** Low priority. Can be addressed in any future test-quality pass; no functional risk.
+
+---
+
 ## Definition of Done
 
 - [x] All 16 tests green (`mix test test/integration/search/vector_store_test.exs`)
@@ -168,3 +207,4 @@ estimated_days: 1.5
 - [x] Idempotency confirmed — no duplicate vec0 rows (I-03 green)
 - [x] sqlite-vec Hex version pinned exactly in `mix.exs` and documented in a comment
 - [x] Smoke test completed and result recorded (pass/fail + version used) in sprint notes before any implementation
+- [x] QA review complete (2026-05-12) — major issue (no transaction) fixed; two minor test-quality issues tracked above

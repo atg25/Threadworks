@@ -18,7 +18,7 @@ This folder holds specifications, sprint plans, and reference material for the I
 - **Phase 2 — Audit follow-through (complete):** **SPRINT-11** (correctness & XSS, ✅ complete), **SPRINT-12** (resilience & cleanup, ✅ complete), **SPRINT-13** (hardening: architecture & internals, ✅ complete), **SPRINT-14** (hardening: tooling, docs & governance, ✅ complete), **SPRINT-15** (persistence, auth & first controls, ✅ complete), **SPRINT-16** (feature velocity, ✅ complete).
 - **Phase 3 — Polish & Refinement (complete):** **SP-03-17** (foundation updates & bug fixes, ✅ complete); **SP-03-18** (component polish & empty states, ✅ complete); **SP-03-19A** (desktop layout & header refactor, ✅ complete 2026-04-29); **SP-03-19B** (mobile off-canvas drawer, ✅ complete 2026-04-29); **SP-03-20** (multi-theme engine overhaul, ✅ complete 2026-04-29). Note: a later ad-hoc UI pass already delivered part of the original 19A/20 scope and is now the baseline for future work.
 
-**Overall sprint progress (all phases):** 32 of 36 sprints done (**89%**). Phases 0–3 are complete (23 sprints). Phase 4.0 is complete (3 sprints). Phase 4.1 is complete (8 of 8 sprints: SP-01-01 through SP-01-08). Phase 4.2 is in progress (2 of 5 sprints: SP-02-01, SP-02-02 complete). Phase 4.3–4.4 are draft.
+**Overall sprint progress (all phases):** 33 of 36 sprints done (**92%**). Phases 0–3 are complete (23 sprints). Phase 4.0 is complete (3 sprints). Phase 4.1 is complete (8 of 8 sprints: SP-01-01 through SP-01-08). Phase 4.2 is in progress (4 of 5 sprints: SP-02-01, SP-02-02, SP-02-03, SP-02-04 complete). Phase 4.3–4.4 are draft.
 
 For a single table of every sprint ID, phase label, and status, see **[`sprints/README.md`](sprints/README.md)**.
 
@@ -74,7 +74,9 @@ Phase 4 transforms the app into an AI style consultant for second-hand clothing.
   - **SP-02-02** ✅ closed (2026-05-11): QueryProcessor — Lowercase, stopword removal (preserving size terms), synonym expansion with OR grouping, and FTS5 operator safety. Pure-function text normalization pipeline. 19/19 tests passing. **QA review identified 4 spec ambiguities; resolved all with user guidance (lowercase OR, apostrophe stripping, stopword list pruning, per-token escaping timing). No regressions across 599 non-feature tests.** Next sprint dependency ready: FTS5Index implementation.
 - **Phases 4.3–4.4:** Chat RAG, UI (draft).
 
-**Next active sprint:** SP-02-03 — VectorStore (Phase 2). See [`phases/overview.md`](phases/overview.md) for dependency map and locked decisions.
+- **SP-02-04** ✅ closed (2026-05-12): FTS5Index — Full-text search with BM25 ranking and delete-then-insert upsert pattern for external content tables. 17/17 tests passing (3 unit, 11 integration, 3 E2E). Fixed critical issues during QA: nil BM25 scores, dual implementation divergence, missing transaction atomicity, overly broad error rescue.
+
+**Next active sprint:** SP-02-05a — HybridEngine Core (Phase 2). See [`phases/overview.md`](phases/overview.md) for dependency map and locked decisions.
 
 ## Audit Notes
 
