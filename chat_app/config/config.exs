@@ -7,13 +7,64 @@
 # General application configuration
 import Config
 
+config :chat_app, :scopes,
+  user: [
+    default: true,
+    module: ChatApp.Accounts.Scope,
+    assign_key: :current_scope,
+    access_path: [:user, :id],
+    schema_key: :user_id,
+    schema_type: :id,
+    schema_table: :users,
+    test_data_fixture: ChatApp.AccountsFixtures,
+    test_setup_helper: :register_and_log_in_user
+  ]
+
 config :chat_app,
   # Used by Ecto generators (mix phx.gen.schema, etc.) once Sprint 15's persistence layer lands.
   generators: [timestamp_type: :utc_datetime]
 
 config :chat_app, ecto_repos: [ChatApp.Repo]
 
+scrape_queries = [
+  "vintage levi",
+  "y2k denim",
+  "silk slip dress",
+  "90s windbreaker",
+  "cashmere sweater"
+]
+
+config :chat_app, :scrape_queries, scrape_queries
+
+config :chat_app, Oban,
+  repo: ChatApp.Repo,
+  queues: [scraper: 3, embedder: 5],
+  notifier: Oban.Notifiers.PG,
+  prefix: false,
+  plugins: [
+    {Oban.Plugins.Cron,
+     crontab: [
+       {"0 */2 * * *", ChatApp.ETL.Workers.ScrapeWorker,
+        args: %{"queries" => scrape_queries}}
+     ]}
+  ]
+
 config :chat_app, :openai_model, "gpt-4o"
+
+config :chat_app, :openai_embeddings_url,
+  System.get_env("OPENAI_EMBEDDINGS_URL", "https://api.openai.com/v1/embeddings")
+
+config :chat_app, :ebay_api_base_url,
+  System.get_env("EBAY_API_BASE_URL", "https://api.ebay.com")
+
+config :chat_app, :ebay_app_id, System.get_env("EBAY_APP_ID", "")
+config :chat_app, :ebay_cert_id, System.get_env("EBAY_CERT_ID", "")
+
+config :chat_app, :depop_api_base_url,
+  System.get_env("DEPOP_API_BASE_URL", "https://api.depop.com")
+
+config :chat_app, :poshmark_base_url,
+  System.get_env("POSHMARK_BASE_URL", "https://poshmark.com")
 
 config :hammer,
   backend:
@@ -57,6 +108,15 @@ config :logger, :default_formatter,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# Configures the mailer
+#
+# By default it uses the "Local" adapter which stores the emails
+# locally. You can see the emails in your browser, at "/dev/mailbox".
+#
+# For production it's recommended to configure a different adapter
+# at the `config/runtime.exs`.
+config :chat_app, ChatApp.Mailer, adapter: Swoosh.Adapters.Local
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

@@ -15,8 +15,8 @@ defmodule ChatApp.Application do
       {DNSCluster, query: Application.get_env(:chat_app, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: ChatApp.PubSub},
       {Task.Supervisor, name: ChatApp.TaskSupervisor},
-      # Start a worker by calling: ChatApp.Worker.start_link(arg)
-      # {ChatApp.Worker, arg},
+      {Oban, Application.fetch_env!(:chat_app, Oban)},
+      ChatApp.ETL.Sources.Ebay.TokenCache,
       # Start to serve requests, typically the last entry
       ChatAppWeb.Endpoint
     ]

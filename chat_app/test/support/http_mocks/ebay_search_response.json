@@ -1,0 +1,655 @@
+{
+  "total": 50,
+  "itemSummaries": [
+    {
+      "itemId": "v1|111111111|0",
+      "title": "Levi's 501 Original Fit Jeans",
+      "price": {
+        "value": "45.99",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/001/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/111111111"
+    },
+    {
+      "itemId": "v1|222222222|0",
+      "title": "Nike Air Max 90 Sneakers Size 10",
+      "price": {
+        "value": "79.99",
+        "currency": "USD"
+      },
+      "condition": "New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/002/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/222222222"
+    },
+    {
+      "itemId": "v1|333333333|0",
+      "title": "Vintage Band Tee 1990s Rock Concert",
+      "price": {
+        "value": "32.00",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/003/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/333333333"
+    },
+    {
+      "itemId": "v1|444444444|0",
+      "title": "Ralph Lauren Polo Shirt Blue Medium",
+      "price": {
+        "value": "28.50",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/004/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/444444444"
+    },
+    {
+      "itemId": "v1|555555555|0",
+      "title": "Adidas Track Jacket Vintage 90s",
+      "price": {
+        "value": "55.00",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/005/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/555555555"
+    },
+    {
+      "itemId": "v1|666666666|0",
+      "title": "Patagonia Fleece Jacket Womens S",
+      "price": {
+        "value": "68.00",
+        "currency": "USD"
+      },
+      "condition": "New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/006/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/666666666"
+    },
+    {
+      "itemId": "v1|777777777|0",
+      "title": "Doc Martens 1460 Black Leather Boots 8",
+      "price": {
+        "value": "89.99",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/007/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/777777777"
+    },
+    {
+      "itemId": "v1|888888888|0",
+      "title": "Champion Reverse Weave Hoodie Grey XL",
+      "price": {
+        "value": "35.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/008/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/888888888"
+    },
+    {
+      "itemId": "v1|999999999|0",
+      "title": "Carhartt WIP Pants Tan 32x30",
+      "price": {
+        "value": "48.00",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/009/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/999999999"
+    },
+    {
+      "itemId": "v1|101010101|0",
+      "title": "The North Face Puffer Jacket M",
+      "price": {
+        "value": "95.00",
+        "currency": "USD"
+      },
+      "condition": "New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/010/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/101010101"
+    },
+    {
+      "itemId": "v1|112121212|0",
+      "title": "Wrangler Cowboy Cut Jeans 34x32",
+      "price": {
+        "value": "22.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/011/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/112121212"
+    },
+    {
+      "itemId": "v1|123232323|0",
+      "title": "Tommy Hilfiger Windbreaker Jacket",
+      "price": {
+        "value": "42.00",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/012/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/123232323"
+    },
+    {
+      "itemId": "v1|134343434|0",
+      "title": "Vans Old Skool Sneakers Black White 9",
+      "price": {
+        "value": "38.00",
+        "currency": "USD"
+      },
+      "condition": "New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/013/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/134343434"
+    },
+    {
+      "itemId": "v1|145454545|0",
+      "title": "Stussy Logo Tee White Large",
+      "price": {
+        "value": "29.99",
+        "currency": "USD"
+      },
+      "condition": "New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/014/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/145454545"
+    },
+    {
+      "itemId": "v1|156565656|0",
+      "title": "Supreme Box Logo Hoodie Red M",
+      "price": {
+        "value": "175.00",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/015/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/156565656"
+    },
+    {
+      "itemId": "v1|167676767|0",
+      "title": "Dickies 874 Work Pants Black 34x30",
+      "price": {
+        "value": "18.50",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/016/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/167676767"
+    },
+    {
+      "itemId": "v1|178787878|0",
+      "title": "Arc'teryx Beta AR Jacket Womens S",
+      "price": {
+        "value": "285.00",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/017/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/178787878"
+    },
+    {
+      "itemId": "v1|189898989|0",
+      "title": "Converse Chuck Taylor All Star 11",
+      "price": {
+        "value": "24.99",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/018/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/189898989"
+    },
+    {
+      "itemId": "v1|190909090|0",
+      "title": "Gap Vintage Denim Jacket Blue M",
+      "price": {
+        "value": "33.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/019/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/190909090"
+    },
+    {
+      "itemId": "v1|201010101|0",
+      "title": "Polo Sport Bucket Hat Navy",
+      "price": {
+        "value": "15.00",
+        "currency": "USD"
+      },
+      "condition": "New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/020/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/201010101"
+    },
+    {
+      "itemId": "v1|212121212|0",
+      "title": "Vintage Levi's Denim Shorts 32",
+      "price": {
+        "value": "27.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/021/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/212121212"
+    },
+    {
+      "itemId": "v1|223232323|0",
+      "title": "New Balance 550 Sneakers Beige 10.5",
+      "price": {
+        "value": "65.00",
+        "currency": "USD"
+      },
+      "condition": "New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/022/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/223232323"
+    },
+    {
+      "itemId": "v1|234343434|0",
+      "title": "Hanes Beefy T Crew White 3-Pack",
+      "price": {
+        "value": "12.99",
+        "currency": "USD"
+      },
+      "condition": "New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/023/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/234343434"
+    },
+    {
+      "itemId": "v1|245454545|0",
+      "title": "Birkenstock Arizona Brown Sandals 42",
+      "price": {
+        "value": "55.00",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/024/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/245454545"
+    },
+    {
+      "itemId": "v1|256565656|0",
+      "title": "Polo Ralph Lauren Oxford Shirt Blue L",
+      "price": {
+        "value": "19.99",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/025/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/256565656"
+    },
+    {
+      "itemId": "v1|267676767|0",
+      "title": "Vintage Wrangler Denim Jacket M",
+      "price": {
+        "value": "62.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/026/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/267676767"
+    },
+    {
+      "itemId": "v1|278787878|0",
+      "title": "Tommy Hilfiger Polo Shirt Red L",
+      "price": {
+        "value": "22.50",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/027/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/278787878"
+    },
+    {
+      "itemId": "v1|289898989|0",
+      "title": "Calvin Klein Jeans Slim Fit 32x30",
+      "price": {
+        "value": "38.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/028/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/289898989"
+    },
+    {
+      "itemId": "v1|290909090|0",
+      "title": "Patagonia Fleece Pullover Blue XL",
+      "price": {
+        "value": "75.00",
+        "currency": "USD"
+      },
+      "condition": "Good",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/029/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/290909090"
+    },
+    {
+      "itemId": "v1|301010101|0",
+      "title": "Gap Classic Chinos Khaki 34x32",
+      "price": {
+        "value": "18.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/030/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/301010101"
+    },
+    {
+      "itemId": "v1|312121212|0",
+      "title": "J.Crew Flannel Shirt Plaid L",
+      "price": {
+        "value": "27.99",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/031/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/312121212"
+    },
+    {
+      "itemId": "v1|323232323|0",
+      "title": "Levi's 511 Slim Jeans Dark Wash 30x30",
+      "price": {
+        "value": "40.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/032/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/323232323"
+    },
+    {
+      "itemId": "v1|334343434|0",
+      "title": "Champion Reverse Weave Hoodie Grey M",
+      "price": {
+        "value": "35.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/033/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/334343434"
+    },
+    {
+      "itemId": "v1|345454545|0",
+      "title": "Brooks Brothers OCBD Shirt White M",
+      "price": {
+        "value": "30.00",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/034/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/345454545"
+    },
+    {
+      "itemId": "v1|356565656|0",
+      "title": "Columbia Sportswear Fleece Vest M",
+      "price": {
+        "value": "24.00",
+        "currency": "USD"
+      },
+      "condition": "Good",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/035/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/356565656"
+    },
+    {
+      "itemId": "v1|367676767|0",
+      "title": "Under Armour Compression Shirt S",
+      "price": {
+        "value": "16.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/036/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/367676767"
+    },
+    {
+      "itemId": "v1|378787878|0",
+      "title": "Carhartt Work Jacket Brown L",
+      "price": {
+        "value": "58.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/037/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/378787878"
+    },
+    {
+      "itemId": "v1|389898989|0",
+      "title": "Dickies Work Pants 34x30",
+      "price": {
+        "value": "20.00",
+        "currency": "USD"
+      },
+      "condition": "Good",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/038/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/389898989"
+    },
+    {
+      "itemId": "v1|390909090|0",
+      "title": "Polo Ralph Lauren Khaki Pants 36x30",
+      "price": {
+        "value": "34.00",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/039/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/390909090"
+    },
+    {
+      "itemId": "v1|401010101|0",
+      "title": "Banana Republic Dress Shirt Blue L",
+      "price": {
+        "value": "25.00",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/040/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/401010101"
+    },
+    {
+      "itemId": "v1|412121212|0",
+      "title": "Timberland Waterproof Boots 11",
+      "price": {
+        "value": "85.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/041/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/412121212"
+    },
+    {
+      "itemId": "v1|423232323|0",
+      "title": "Vans Old Skool Sneakers Black 10",
+      "price": {
+        "value": "45.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/042/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/423232323"
+    },
+    {
+      "itemId": "v1|434343434|0",
+      "title": "New Balance 574 Running Shoes 9.5",
+      "price": {
+        "value": "55.00",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/043/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/434343434"
+    },
+    {
+      "itemId": "v1|445454545|0",
+      "title": "Converse Chuck Taylor High Top 8",
+      "price": {
+        "value": "35.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/044/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/445454545"
+    },
+    {
+      "itemId": "v1|456565656|0",
+      "title": "Dr. Martens 1460 Boots Black 9",
+      "price": {
+        "value": "95.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/045/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/456565656"
+    },
+    {
+      "itemId": "v1|467676767|0",
+      "title": "Fossil Leather Belt Brown 34",
+      "price": {
+        "value": "18.00",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/046/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/467676767"
+    },
+    {
+      "itemId": "v1|478787878|0",
+      "title": "Ray-Ban Wayfarer Sunglasses Black",
+      "price": {
+        "value": "65.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/047/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/478787878"
+    },
+    {
+      "itemId": "v1|489898989|0",
+      "title": "Herschel Supply Backpack Navy",
+      "price": {
+        "value": "42.00",
+        "currency": "USD"
+      },
+      "condition": "Used",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/048/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/489898989"
+    },
+    {
+      "itemId": "v1|490909090|0",
+      "title": "North Face Borealis Backpack Black",
+      "price": {
+        "value": "68.00",
+        "currency": "USD"
+      },
+      "condition": "Good",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/049/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/490909090"
+    },
+    {
+      "itemId": "v1|501010101|0",
+      "title": "Fjallraven Kanken Mini Teal",
+      "price": {
+        "value": "52.00",
+        "currency": "USD"
+      },
+      "condition": "Like New",
+      "image": {
+        "imageUrl": "https://i.ebayimg.com/images/g/050/s-l225.jpg"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/501010101"
+    }
+  ]
+}

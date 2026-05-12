@@ -98,3 +98,5 @@ config :chat_app, ChatApp.Repo,
   database: Path.expand("../priv/repo/chat_app_dev.db", __DIR__),
   pool_size: 5,
   show_sensitive_data_on_connection_error: true
+
+config :swoosh, :api_client, Swoosh.ApiClient.Local

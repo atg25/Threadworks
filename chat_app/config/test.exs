@@ -1,5 +1,8 @@
 import Config
 
+# Only in tests, remove the complexity from the password hashing algorithm
+config :bcrypt_elixir, :log_rounds, 1
+
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :chat_app, ChatAppWeb.Endpoint,
@@ -22,10 +25,16 @@ config :phoenix,
   sort_verified_routes_query_params: true
 
 config :chat_app, :openai_api_key, "sk-test-stub"
+config :chat_app, :ebay_app_id, "test_app_id"
+config :chat_app, :ebay_cert_id, "test_cert_id"
 config :chat_app, :openai_module, ChatApp.OpenAI.Stub
 config :chat_app, :req_options, plug: {Req.Test, ChatApp.OpenAI}
 config :chat_app, :allow_hero_override, true
 config :chat_app, :disable_rate_limit, false
+
+config :chat_app, :scrape_queries, ["test query"]
+
+config :chat_app, Oban, testing: :inline
 
 config :chat_app, ChatApp.Repo,
   database: Path.expand("../priv/repo/chat_app_test.db", __DIR__),

@@ -1,0 +1,76 @@
+Running ExUnit with seed: 451504, max_cases: 16
+Excluding tags: [:e2e, :real_api]
+
+............................................................................................................
+
+  1) test user messages are NOT markdown rendered (plain text) (ChatAppWeb.ChatLiveBubblesTest)
+     test/chat_app_web/live/chat_live_bubbles_test.exs:98
+     Refute with =~ failed
+     code:  refute user_html =~ "<strong>"
+     left:  "<div class=\"ui-chat-message-user ml-auto max-w-[80%] rounded-[1.4rem] px-[var(--space-4)] py-[var(--space-3)] text-[0.95rem] leading-relaxed font-medium\" data-chat-message-bubble=\"data-chat-message-bubble\" data-chat-message-role=\"user\" data-role=\"user\"><p><strong>not bold</strong></p></div>"
+     right: "<strong>"
+     stacktrace:
+       test/chat_app_web/live/chat_live_bubbles_test.exs:109: (test)
+
+..................................
+
+  2) test rate-limited send does NOT invoke openai_module().stream/2 (ChatAppWeb.Sprint12ImmediateFixesResilienceIntegrationTest)
+     test/integration/sprint_12_immediate_fixes_resilience_test.exs:104
+     Assertion with == failed
+     code:  assert call_count == 20
+     left:  0
+     right: 20
+     stacktrace:
+       test/integration/sprint_12_immediate_fixes_resilience_test.exs:120: (test)
+
+.....00:09:23.967 [error] OpenAI transport error (reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:23.967 [warning] OpenAI retryable failure (attempt: 1, reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:24.271 [error] OpenAI transport error (reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:24.271 [warning] OpenAI retryable failure (attempt: 2, reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:24.824 [error] OpenAI transport error (reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:24.824 [error] OpenAI stream failed after 2 retries (reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+.00:09:24.828 [error] OpenAI exception (error: could not fetch application environment :openai_api_key for application :chat_app because configuration at :openai_api_key was not set, message_count: 1)
+..00:09:24.831 [error] OpenAI transport error (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:24.831 [warning] OpenAI retryable failure (attempt: 1, reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:25.082 [error] OpenAI transport error (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:25.082 [warning] OpenAI retryable failure (attempt: 2, reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:25.583 [error] OpenAI transport error (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+.00:09:25.583 [error] OpenAI stream failed after 2 retries (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+............................................................00:09:25.685 [error] Exqlite.Connection (#PID<0.303.0> ("db_conn_2")) disconnected: ** (DBConnection.ConnectionError) owner #PID<0.1465.0> exited
+..............................00:09:25.972 [error] OpenAI transport error (reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:25.972 [warning] OpenAI retryable failure (attempt: 1, reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:26.276 [error] OpenAI transport error (reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:26.276 [warning] OpenAI retryable failure (attempt: 2, reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:26.830 [error] OpenAI transport error (reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:26.830 [error] OpenAI stream failed after 2 retries (reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+.....00:09:27.968 [error] OpenAI transport error (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:27.968 [warning] OpenAI retryable failure (attempt: 1, reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:28.221 [error] OpenAI transport error (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:28.221 [warning] OpenAI retryable failure (attempt: 2, reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:28.724 [error] OpenAI transport error (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:28.724 [error] OpenAI stream failed after 2 retries (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+..00:09:29.988 [error] OpenAI transport error (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:29.988 [warning] OpenAI retryable failure (attempt: 1, reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+.00:09:30.246 [error] OpenAI transport error (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:30.246 [warning] OpenAI retryable failure (attempt: 1, reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:30.499 [error] OpenAI transport error (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:30.499 [warning] OpenAI retryable failure (attempt: 2, reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:31.001 [error] OpenAI transport error (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:31.001 [error] OpenAI stream failed after 2 retries (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+....00:09:31.745 [error] OpenAI transport error (reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:31.745 [warning] OpenAI retryable failure (attempt: 1, reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:32.198 [error] OpenAI transport error (reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:32.198 [warning] OpenAI retryable failure (attempt: 2, reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:32.902 [error] OpenAI transport error (reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+00:09:32.902 [error] OpenAI stream failed after 2 retries (reason: %Req.TransportError{reason: :timeout}, message_count: 1)
+..00:09:32.914 [warning] OpenAI non-2xx response (status: 401, message_count: 1)
+..00:09:33.982 [warning] OpenAI non-2xx response (status: 500, message_count: 1)
+....00:09:34.602 [error] OpenAI transport error (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:34.602 [warning] OpenAI retryable failure (attempt: 1, reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:34.855 [error] OpenAI transport error (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:34.855 [warning] OpenAI retryable failure (attempt: 2, reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:35.358 [error] OpenAI transport error (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+00:09:35.358 [error] OpenAI stream failed after 2 retries (reason: %Req.TransportError{reason: :econnrefused}, message_count: 1)
+.....
+Finished in 12.8 seconds (0.4s async, 12.4s sync)
+268 tests, 2 failures (47 excluded)

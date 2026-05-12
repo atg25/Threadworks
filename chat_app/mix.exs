@@ -43,8 +43,11 @@ defmodule ChatApp.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "~> 1.7"},
-      {:phoenix_live_view, "~> 0.20"},
+      {:bcrypt_elixir, "~> 3.0"},
+      {:swoosh, "~> 1.4"},
+      {:phoenix_ecto, "~> 4.5"},
+      {:phoenix, "~> 1.8.7"},
+      {:phoenix_live_view, "~> 1.0.0"},
       {:phoenix_html, "~> 4.0"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
@@ -55,6 +58,9 @@ defmodule ChatApp.MixProject do
       {:hammer, "~> 6.2"},
       {:dotenvy, "~> 0.8", only: :dev},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
+      {:oban, "~> 2.17"},
+      # Pinned exactly — native lib 0.1.5; smoke-tested 2026-05-11: MATCH syntax confirmed working
+      {:sqlite_vec, "== 0.1.0"},
       {:ecto_sql, "~> 3.10"},
       {:ecto_sqlite3, "~> 0.13"},
       {:dns_cluster, "~> 0.2.0"},
