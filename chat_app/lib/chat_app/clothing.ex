@@ -21,12 +21,21 @@ defmodule ChatApp.Clothing do
   def get_item!(id), do: Repo.get!(Item, id)
 
   @doc """
+  Gets a single item, returns nil if not found.
+  """
+  def get_item(id), do: Repo.get(Item, id)
+
+  @doc """
   Creates an item.
   """
   def create_item(attrs \\ %{}) do
     %Item{}
     |> Item.changeset(attrs)
     |> Repo.insert()
+  end
+
+  def search_hybrid(query_text, opts \\ []) do
+    ChatApp.Search.HybridEngine.search(query_text, opts)
   end
 
   @doc """

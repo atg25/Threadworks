@@ -1,13 +1,14 @@
 ---
-status: draft
-last_updated: 2026-05-06
+status: in_progress
+last_updated: 2026-05-12
 phase: 4
-sub_phase: 3
+sub_phase: 4
 slug: chat-rag
 complexity: M
+progress: 4/5 sprints complete (SP-04-01: ✓, SP-04-02: ✓, SP-04-03: ✓, SP-04-04: ✓)
 ---
 
-# Phase 3 — Chat RAG Integration
+# Phase 4 — Chat RAG Integration
 
 **Goal:** Retrieve relevant items before each chat completion, inject them into the system prompt, parse the LLM's structured card references from the streamed response, and emit them to LiveView.
 
@@ -34,7 +35,7 @@ Only include items you actually recommend.
 **`augment(user_message) :: {:ok, augmented_prompt, [%ClothingItem{}]}`**
 Calls `HybridEngine.search(user_message)` → if results non-empty, calls `build_prompt/2`; if empty, returns `{:ok, base_prompt, []}`.
 
-### `lib/chat_app/ai/response_parser.ex`
+### `lib/chat_app/ai/response_parser.ex` ✓ (SP-04-02)
 
 **`parse(chunk :: String.t(), buffer :: String.t()) :: {[card_map()], String.t()}`**
 
@@ -44,8 +45,10 @@ Where `card_map()` is `%{item_id: integer(), reason: String.t()}`.
 - Attempts `Jason.decode` on the accumulated buffer looking for `{"cards": [...]}`
 - On success: extracts cards, clears matched portion from buffer, returns `{cards, remaining_buffer}`
 - On failure (incomplete JSON): returns `{[], buffer <> chunk}`
-- On malformed JSON (parse error after complete object): returns `{[], ""}` — silently discards, never crashes
+- On malformed JSON (parse error after complete object): retries from next `{` in buffer, never crashes
 - Caller looks up full `%ClothingItem{}` records from DB by `item_id` after receiving cards
+
+**Status:** Complete. All 13 tests passing. Handles UTF-8, escaped quotes, multi-byte chars, spurious `{` in prefix text (with retry logic).
 
 ### `lib/chat_app/ai/query_understander.ex`
 
@@ -116,3 +119,4 @@ All criteria are unit-testable without HTTP calls or LLM invocation.
 - **Context window budget:** 10 items × ~80 tokens = ~800 tokens overhead per request. With a long conversation, this can push near limits for gpt-4o-mini (128k context, but beware cost). The token guard (cap at 8 items after 3000 conversation tokens) addresses the worst case.
 - **RAG retrieval latency:** `HybridEngine.search` makes one OpenAI HTTP call (embedding) + two SQLite queries. Typical latency: 300–700ms. This happens before streaming starts, so the user sees a "Searching..." indicator and then the stream begins. Do not skip this indicator — the pause is noticeable.
 - **Non-clothing messages:** If the user asks about something unrelated to clothing (e.g., "what time is it?"), `HybridEngine.search` will return low-relevance results or empty. `QueryUnderstander` will return `:clarify` or `StyleAdvisor.augment` will use the base prompt. The LLM will answer normally without product recommendations. No special-casing needed.
+- **`build_prompt/2` raises on unknown source label (carry-forward from SP-04-03):** `build_prompt/2` uses `Map.fetch!(@source_labels, ...)` keyed on `"ebay"`, `"depop"`, and `"poshmark"`. If a new scraper writes a different source string to the DB without updating `@source_labels` in `style_advisor.ex`, `augment/2`'s `{:ok, results}` branch will raise `KeyError` and crash the LiveView process. The current ETL layer is closed over exactly those three sources so this cannot trigger today. **When any new scraper source is added (Phase 5+), `@source_labels` in `lib/chat_app/ai/style_advisor.ex` must be updated at the same time.**

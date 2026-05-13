@@ -28,6 +28,9 @@ defmodule ChatAppWeb.ChatLive do
   alias Phoenix.LiveView.JS
   alias ChatApp.Conversations
   alias ChatApp.Markdown
+  alias ChatApp.Clothing
+  alias ChatApp.AI.QueryUnderstander
+  alias ChatApp.AI.ResponseParser
   alias ChatAppWeb.SidebarComponent
   import ChatAppWeb.CoreComponents, only: [icon: 1]
 
@@ -69,7 +72,10 @@ defmodule ChatAppWeb.ChatLive do
         rate_limit_error: nil,
         at_bottom: true,
         hero_state: hero_state,
-        new_chat_nonce: 0
+        new_chat_nonce: 0,
+        rag_status: :idle,
+        response_parser_buffer: "",
+        pending_cards: []
       )
 
     if connected?(socket) do
@@ -131,25 +137,17 @@ defmodule ChatAppWeb.ChatLive do
 
           user_msg = %{id: user_row.id, role: :user, content: text}
           messages = socket.assigns.messages ++ [user_msg]
-          llm_messages = Enum.map(messages, &Map.take(&1, [:role, :content]))
-          pid = self()
 
-          {:ok, task_pid} =
-            Task.Supervisor.start_child(ChatApp.TaskSupervisor, fn ->
-              try do
-                openai_module().stream(llm_messages, pid, openai_stream_opts(socket))
-              rescue
-                e -> send(pid, {:stream_error, Exception.message(e)})
-              end
-            end)
+          send(self(), {:do_rag, text})
 
           {:noreply,
            assign(socket,
              messages: messages,
              input: "",
              is_sending: true,
+             rag_status: :searching,
              stream_buffer: "",
-             stream_task_pid: task_pid,
+             stream_task_pid: nil,
              assistant_message_id: nil,
              persist_dirty: false,
              persist_token_count: 0,
@@ -402,6 +400,46 @@ defmodule ChatAppWeb.ChatLive do
   end
 
   @impl true
+  def handle_info({:do_rag, _text}, socket) when socket.assigns.is_sending == false do
+    # Stop was clicked or conversation switched before augment ran — discard silently.
+    {:noreply, assign(socket, rag_status: :idle, response_parser_buffer: "", pending_cards: [])}
+  end
+
+  def handle_info({:do_rag, text}, socket) do
+    conversation_tokens = socket.assigns.usage_totals.total_tokens
+
+    {:ok, augmented_prompt, items} =
+      style_advisor_module().augment(text, conversation_tokens: conversation_tokens)
+
+    case QueryUnderstander.evaluate(items) do
+      {:clarify, question} ->
+        socket = ensure_conversation(socket)
+        {:ok, row} = Conversations.append_message(socket.assigns.conversation_id, :assistant, question)
+        assistant_msg = %{id: row.id, role: :assistant, content: question}
+
+        {:noreply,
+         assign(socket,
+           messages: socket.assigns.messages ++ [assistant_msg],
+           rag_status: :idle,
+           is_sending: false
+         )}
+
+      {:recommend, _items} ->
+        {:ok, task_pid} = start_streaming(augmented_prompt, socket)
+
+        socket =
+          assign(socket,
+            rag_status: :streaming,
+            response_parser_buffer: "",
+            pending_cards: [],
+            stream_task_pid: task_pid
+          )
+
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_info({:stream_token, token}, socket) do
     if socket.assigns.is_sending == false do
       {:noreply, socket}
@@ -412,9 +450,26 @@ defmodule ChatAppWeb.ChatLive do
       buffer = socket.assigns.stream_buffer <> token
       messages = upsert_assistant_message(messages, assistant_id, buffer)
 
+      {cards, remaining_buffer} =
+        ResponseParser.parse(token, socket.assigns.response_parser_buffer)
+
+      new_cards =
+        Enum.flat_map(cards, fn card ->
+          case Clothing.get_item(card.item_id) do
+            nil -> []
+            item -> [%{item: item, reason: card.reason}]
+          end
+        end)
+
       socket =
         socket
-        |> assign(messages: messages, stream_buffer: buffer, assistant_message_id: assistant_id)
+        |> assign(
+          messages: messages,
+          stream_buffer: buffer,
+          assistant_message_id: assistant_id,
+          response_parser_buffer: remaining_buffer,
+          pending_cards: socket.assigns.pending_cards ++ new_cards
+        )
         |> schedule_persist_timer()
         |> bump_persist_token_count()
         |> maybe_persist_by_token_threshold()
@@ -465,7 +520,9 @@ defmodule ChatAppWeb.ChatLive do
        assistant_message_id: nil,
        persist_dirty: false,
        persist_token_count: 0,
-       persist_timer_ref: nil
+       persist_timer_ref: nil,
+       response_parser_buffer: "",
+       pending_cards: []
      )}
   end
 
@@ -505,16 +562,34 @@ defmodule ChatAppWeb.ChatLive do
           messages
         end
 
+      pending = socket.assigns.pending_cards
+
+      render_messages =
+        if pending != [] do
+          case List.last(render_messages) do
+            %{role: :assistant} = last ->
+              List.replace_at(render_messages, -1, Map.put(last, :cards, pending))
+
+            _ ->
+              render_messages
+          end
+        else
+          render_messages
+        end
+
       {:noreply,
        assign(socket,
          messages: render_messages,
          is_sending: false,
+         rag_status: :idle,
          stream_buffer: "",
          stream_task_pid: nil,
          assistant_message_id: nil,
          persist_dirty: false,
          persist_token_count: 0,
-         persist_timer_ref: nil
+         persist_timer_ref: nil,
+         response_parser_buffer: "",
+         pending_cards: []
        )}
     end
   end
@@ -544,12 +619,15 @@ defmodule ChatAppWeb.ChatLive do
     {:noreply,
      assign(socket,
        is_sending: false,
+       rag_status: :idle,
        stream_buffer: "",
        stream_task_pid: nil,
        assistant_message_id: nil,
        persist_dirty: false,
        persist_token_count: 0,
-       persist_timer_ref: nil
+       persist_timer_ref: nil,
+       response_parser_buffer: "",
+       pending_cards: []
      )}
   end
 
@@ -586,8 +664,11 @@ defmodule ChatAppWeb.ChatLive do
        messages: messages,
        errors: errors,
        is_sending: false,
+       rag_status: :idle,
        stream_buffer: "",
-       stream_task_pid: nil
+       stream_task_pid: nil,
+       response_parser_buffer: "",
+       pending_cards: []
      )}
   end
 
@@ -643,6 +724,7 @@ defmodule ChatAppWeb.ChatLive do
           <section
             data-chat-surface="true"
             data-chat-surface-mode="embedded"
+            data-rag-status={to_string(@rag_status)}
             class="relative grid h-full min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] bg-background"
           >
             <%= if @sidebar_open do %>
@@ -884,6 +966,11 @@ defmodule ChatAppWeb.ChatLive do
                   <% else %>
                     <%= for msg <- @messages do %>
                       <.message_bubble message={msg} />
+                    <% end %>
+                    <%= if @rag_status == :searching do %>
+                      <div data-rag-indicator="searching" class="ui-chat-rag-searching px-4 py-2 text-sm text-foreground/60">
+                        Searching…
+                      </div>
                     <% end %>
                     <%= for err <- @errors do %>
                       <div
@@ -1190,6 +1277,39 @@ defmodule ChatAppWeb.ChatLive do
     Application.get_env(:chat_app, :openai_module, ChatApp.OpenAI)
   end
 
+  defp style_advisor_module do
+    Application.get_env(:chat_app, :style_advisor_module, ChatApp.AI.StyleAdvisor)
+  end
+
+  defp start_streaming(prompt, socket) do
+    pid = self()
+    messages = Enum.map(socket.assigns.messages, &Map.take(&1, [:role, :content]))
+    base_opts = openai_stream_opts(socket)
+
+    # Merge the RAG-augmented prompt with any user-configured system prompt so
+    # both are forwarded to OpenAI as a single system message. The augmented
+    # prompt leads; the user's custom prompt (if any) is appended after a blank
+    # line so it still takes effect.
+    effective_system_prompt =
+      case Map.get(base_opts, :system_prompt) do
+        user_prompt when is_binary(user_prompt) and user_prompt != "" ->
+          prompt <> "\n\n" <> user_prompt
+
+        _ ->
+          prompt
+      end
+
+    opts = Map.put(base_opts, :system_prompt, effective_system_prompt)
+
+    Task.Supervisor.start_child(ChatApp.TaskSupervisor, fn ->
+      try do
+        openai_module().stream(messages, pid, opts)
+      rescue
+        e -> send(pid, {:stream_error, Exception.message(e)})
+      end
+    end)
+  end
+
   defp message_bubble(%{message: %{role: :user}} = assigns) do
     ~H"""
     <div
@@ -1204,6 +1324,8 @@ defmodule ChatAppWeb.ChatLive do
   end
 
   defp message_bubble(%{message: %{role: :assistant}} = assigns) do
+    assigns = assign_new(assigns, :cards, fn -> Map.get(assigns.message, :cards, []) end)
+
     ~H"""
     <div
       class="ui-chat-message-assistant group rounded-[1.4rem] px-[var(--space-4)] py-[var(--space-3)] text-[0.95rem] leading-relaxed"
@@ -1214,6 +1336,9 @@ defmodule ChatAppWeb.ChatLive do
       <div class="prose prose-theme-inherit prose-sm max-w-none" data-assistant-markdown="true">
         <%= raw(Markdown.to_html(@message.content)) %>
       </div>
+      <%= for card <- @cards do %>
+        <ChatAppWeb.ProductCard.product_card item={card.item} reason={card.reason} saved={false} />
+      <% end %>
       <div class="mt-2 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
         <button
           type="button"
@@ -1551,12 +1676,15 @@ defmodule ChatAppWeb.ChatLive do
 
     assign(socket,
       is_sending: false,
+      rag_status: :idle,
       stream_buffer: "",
       stream_task_pid: nil,
       assistant_message_id: nil,
       persist_dirty: false,
       persist_token_count: 0,
-      persist_timer_ref: nil
+      persist_timer_ref: nil,
+      response_parser_buffer: "",
+      pending_cards: []
     )
   end
 end

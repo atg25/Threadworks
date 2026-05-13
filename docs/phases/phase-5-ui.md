@@ -2,12 +2,12 @@
 status: draft
 last_updated: 2026-05-06
 phase: 4
-sub_phase: 4
+sub_phase: 5
 slug: ui
 complexity: L
 ---
 
-# Phase 4 — UI: Cards, Saved Items, Preferences
+# Phase 5 — UI: Cards, Saved Items, Preferences
 
 **Goal:** Render recommendation cards inline in chat and let users save, organize, and price-track items.
 
@@ -137,7 +137,7 @@ All LiveView tests use `Phoenix.LiveViewTest`.
 
 ## Dependencies
 
-- Phase 3 complete (card data emitted by ResponseParser)
+- Phase 4 complete (card data emitted by ResponseParser)
 - Phase 0 complete (saved_items, user_preferences schema; placeholder SVG committed)
 - Existing user auth (`current_user` in socket assigns, authenticated live_session)
 

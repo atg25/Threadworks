@@ -2,8 +2,10 @@
 id: SP-02-05a
 phase: 2
 slug: hybrid-engine-core
-status: planned
+status: complete
 created: 2026-05-11
+activated_date: 2026-05-12
+completed_date: 2026-05-12
 depends_on:
   - SP-02-01  # test/fixtures/embeddings.exs + Embedder
   - SP-02-02  # QueryProcessor
@@ -176,39 +178,39 @@ Maximum possible score: item ranked 1 in both pipelines → `1/61 + 1/61 = 2/61 
 
 ## Implementation Tasks
 
-- [ ] Add `field :rrf_score, :float, virtual: true` to `ChatApp.Clothing.Item` schema
-- [ ] Write unit tests T-01 through T-05 — all fail
-- [ ] Write integration tests I-01 through I-08 — all fail
-- [ ] Write E2E tests E-01, E-02, E-03 — all fail
-- [ ] Create `lib/chat_app/search/hybrid_engine.ex`
-- [ ] Implement private `rrf_fuse/2`:
-  - [ ] Accept two `%{item_id => rank}` maps
-  - [ ] Collect all unique item_ids across both maps
-  - [ ] For each item_id, compute score: `Enum.sum(for {ranks, _} <- [{vec_ranks, :vec}, {fts_ranks, :fts}], rank = Map.get(ranks, id), do: 1.0 / (60 + rank))`
-  - [ ] Return `[{item_id, score}]` sorted DESC by score
-- [ ] Run T-01 through T-04 — green
-- [ ] Implement `search/2` core pipeline:
-  - [ ] Guard: if `String.trim(query_text) == ""`, return `{:ok, []}`
-  - [ ] Call `Embedder.embed(query_text)` — if `{:error, reason}`, return `{:error, reason}`
-  - [ ] Call `QueryProcessor.process(query_text)` for FTS query
-  - [ ] `Task.async` for `VectorStore.search(query_vector, 50)` and `FTS5Index.search(processed_query, 50)` in parallel; use `Task.await/2` with explicit timeout (e.g. 5_000ms); catch Task exceptions and convert to `{:error, reason}`
-  - [ ] Build rank maps: `%{item_id => rank}` from each result list (rank is 1-based position)
-  - [ ] Call `rrf_fuse/2` → sorted `[{item_id, score}]`
-  - [ ] Take first `limit` results (default 50 for now; filter opts added in SP-02-05b)
-  - [ ] Fetch `%ClothingItem{}` records: `Repo.all(from i in Item, where: i.id in ^ids)`
-  - [ ] Re-order fetched items to match RRF rank order; drop any items not returned by DB (orphans)
-  - [ ] Set `:rrf_score` on each struct using `%{item | rrf_score: score}`
-  - [ ] Return `{:ok, items}`
-- [ ] Run all tests — all green
+- [x] Add `field :rrf_score, :float, virtual: true` to `ChatApp.Clothing.Item` schema
+- [x] Write unit tests T-01 through T-05 — all fail
+- [x] Write integration tests I-01 through I-08 — all fail
+- [x] Write E2E tests E-01, E-02, E-03 — all fail
+- [x] Create `lib/chat_app/search/hybrid_engine.ex`
+- [x] Implement private `rrf_fuse/2`:
+  - [x] Accept two `%{item_id => rank}` maps
+  - [x] Collect all unique item_ids across both maps
+  - [x] For each item_id, compute score: `Enum.sum(for {ranks, _} <- [{vec_ranks, :vec}, {fts_ranks, :fts}], rank = Map.get(ranks, id), do: 1.0 / (60 + rank))`
+  - [x] Return `[{item_id, score}]` sorted DESC by score
+- [x] Run T-01 through T-04 — green
+- [x] Implement `search/2` core pipeline:
+  - [x] Guard: if `String.trim(query_text) == ""`, return `{:ok, []}`
+  - [x] Call `Embedder.embed(query_text)` — if `{:error, reason}`, return `{:error, reason}`
+  - [x] Call `QueryProcessor.process(query_text)` for FTS query
+  - [x] `Task.async` for `VectorStore.search(query_vector, 50)` and `FTS5Index.search(processed_query, 50)` in parallel; use `Task.await/2` with explicit timeout (e.g. 5_000ms); catch Task exceptions and convert to `{:error, reason}`
+  - [x] Build rank maps: `%{item_id => rank}` from each result list (rank is 1-based position)
+  - [x] Call `rrf_fuse/2` → sorted `[{item_id, score}]`
+  - [x] Take first `limit` results (default 50 for now; filter opts added in SP-02-05b)
+  - [x] Fetch `%ClothingItem{}` records: `Repo.all(from i in Item, where: i.id in ^ids)`
+  - [x] Re-order fetched items to match RRF rank order; drop any items not returned by DB (orphans)
+  - [x] Set `:rrf_score` on each struct using `%{item | rrf_score: score}`
+  - [x] Return `{:ok, items}`
+- [x] Run all tests — all green
 
 ---
 
 ## Definition of Done
 
-- [ ] All 16 tests green (`mix test test/integration/search/hybrid_engine_test.exs`)
-- [ ] Acceptance criterion (I-05) green: Item A is first result for "vintage levi denim jacket"
-- [ ] Every returned item is a `%ClothingItem{}` struct (not a plain map) with `rrf_score > 0`
-- [ ] Empty query returns `{:ok, []}` without calling Embedder (I-02 green)
-- [ ] Embedder error propagates as `{:error, _}` (I-03 green)
-- [ ] Task.await has an explicit timeout — no infinite hang possible (I-06 green)
-- [ ] `rrf_score` virtual field added to `ClothingItem` schema
+- [x] All 16 tests green (`mix test test/integration/search/hybrid_engine_test.exs`)
+- [x] Acceptance criterion (I-05) green: Item A is first result for "vintage levi denim jacket"
+- [x] Every returned item is a `%ClothingItem{}` struct (not a plain map) with `rrf_score > 0`
+- [x] Empty query returns `{:ok, []}` without calling Embedder (I-02 green)
+- [x] Embedder error propagates as `{:error, _}` (I-03 green)
+- [x] Task.await has an explicit timeout — no infinite hang possible (I-06 green)
+- [x] `rrf_score` virtual field added to `ClothingItem` schema

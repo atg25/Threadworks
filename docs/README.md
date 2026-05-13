@@ -18,7 +18,7 @@ This folder holds specifications, sprint plans, and reference material for the I
 - **Phase 2 — Audit follow-through (complete):** **SPRINT-11** (correctness & XSS, ✅ complete), **SPRINT-12** (resilience & cleanup, ✅ complete), **SPRINT-13** (hardening: architecture & internals, ✅ complete), **SPRINT-14** (hardening: tooling, docs & governance, ✅ complete), **SPRINT-15** (persistence, auth & first controls, ✅ complete), **SPRINT-16** (feature velocity, ✅ complete).
 - **Phase 3 — Polish & Refinement (complete):** **SP-03-17** (foundation updates & bug fixes, ✅ complete); **SP-03-18** (component polish & empty states, ✅ complete); **SP-03-19A** (desktop layout & header refactor, ✅ complete 2026-04-29); **SP-03-19B** (mobile off-canvas drawer, ✅ complete 2026-04-29); **SP-03-20** (multi-theme engine overhaul, ✅ complete 2026-04-29). Note: a later ad-hoc UI pass already delivered part of the original 19A/20 scope and is now the baseline for future work.
 
-**Overall sprint progress (all phases):** 33 of 36 sprints done (**92%**). Phases 0–3 are complete (23 sprints). Phase 4.0 is complete (3 sprints). Phase 4.1 is complete (8 of 8 sprints: SP-01-01 through SP-01-08). Phase 4.2 is in progress (4 of 5 sprints: SP-02-01, SP-02-02, SP-02-03, SP-02-04 complete). Phase 4.3–4.4 are draft.
+**Overall sprint progress (all phases):** 39 of 40 sprints done (**97.5%**). Phases 0–3 are complete (23 sprints). Phase 4 is in progress: 4 of 5 sprints complete (SP-04-01, SP-04-02, SP-04-03, SP-04-04); 1 planned (SP-04-05).
 
 For a single table of every sprint ID, phase label, and status, see **[`sprints/README.md`](sprints/README.md)**.
 
@@ -31,11 +31,11 @@ Phase 4 transforms the app into an AI style consultant for second-hand clothing.
 | Overview / dep map | [phases/overview.md](phases/overview.md) | Dependency diagram + locked decisions | — | draft |
 | 0 — Foundation | [phases/phase-0-foundation.md](phases/phase-0-foundation.md) | Schema, deps, VectorCodec | S | complete |
 | 1 — ETL Pipeline | [phases/phase-1-etl-pipeline.md](phases/phase-1-etl-pipeline.md) | Scrape eBay/Depop/Poshmark, normalize, deduplicate, embed | M | complete |
-| 2 — Hybrid Search | [phases/phase-2-hybrid-search.md](phases/phase-2-hybrid-search.md) | Vector + FTS5 + RRF search engine | M | draft |
-| 3 — Chat RAG | [phases/phase-3-chat-rag.md](phases/phase-3-chat-rag.md) | Augment prompt, parse card JSON from stream | M | draft |
-| 4 — UI | [phases/phase-4-ui.md](phases/phase-4-ui.md) | Product cards, saved items, preferences | L | draft |
+| 2 — Hybrid Search | [phases/phase-2-hybrid-search.md](phases/phase-2-hybrid-search.md) | Vector + FTS5 + RRF search engine | M | complete |
+| 4 — Chat RAG | [phases/phase-4-chat-rag.md](phases/phase-4-chat-rag.md) | Augment prompt, parse card JSON from stream | M | draft |
+| 5 — UI | [phases/phase-5-ui.md](phases/phase-5-ui.md) | Product cards, saved items, preferences | L | draft |
 
-**Build order:** 0 → 1 → 2 → 3 → 4. Safe parallelism: Phase 4 saved-items page and preferences form can be scaffolded against Phase 0 schema before Phases 1–3 are complete.
+**Build order:** 0 → 1 → 2 → 3 → 4 → 5. Safe parallelism: Phase 5 saved-items page and preferences form can be scaffolded against Phase 0 schema before Phases 1–4 are complete.
 
 **External credentials needed before Phase 1:** `EBAY_APP_ID`, `EBAY_CERT_ID` (free registration at developer.ebay.com). `OPENAI_API_KEY` already present.
 
@@ -61,6 +61,10 @@ Phase 4 transforms the app into an AI style consultant for second-hand clothing.
 
 - **Phase 4.0 — Foundation:** ✅ complete (SP-00-01, SP-00-02, SP-00-03 from old Phase 0; schema and VectorCodec in place).
 - **Phase 4.1 — ETL Pipeline (complete):**
+- **Phase 4.3 — Chat RAG (in progress):**
+  - **SP-04-01** ✅ closed (2026-05-12): Prompt Builder and Query Evaluator — `StyleAdvisor.build_prompt/2` formats items for LLM injection with AVAILABLE ITEMS block, and `QueryUnderstander.evaluate/1` filters by RRF score threshold. 14/14 tests passing. Critical issues found and fixed during QA: implementation crashed on real DB items (strings, not atoms); price formatting deviated from spec. Both fixed via `to_string/1` for condition/source and `Decimal.round/to_string` for prices.
+  - **SP-04-02** ✅ closed (2026-05-12): ResponseParser — Streaming JSON chunk accumulation with robust handling of splits, escaped quotes, UTF-8, and spurious `{` in prefix text. `parse/2` extracts `{"cards": [...]}` from buffer, coerces numeric `item_id` (string or int), and retries on malformed JSON. 13/13 tests passing. Fixed critical issue during QA: spurious `{word}` in prefix text now retries from next `{` instead of discarding all remaining JSON. Zero regressions across 686 tests.
+  - **SP-04-04** ✅ closed (2026-05-12): ChatLive RAG Pipeline — Async two-phase `handle_event("send_message")` → `handle_info({:do_rag, text})` pattern; `rag_status` state machine (:idle, :searching, :streaming); stream chunk parsing via ResponseParser with card accumulation into pending_cards; nil-safe Clothing.get_item/1 DB lookups; error resets for :stream_done, :stream_error, :stream_stopped, :stream_retrying, cancel_stream/1. All 10 sprint tests passing (U1–U2 unit, I1–I5 integration, M1–M3 mutation). Fixed critical bugs during implementation and QA: orphaned async work guard on {:do_rag} when is_sending=false, stream_stopped/stream_retrying state resets, cancel_stream RAG resets, dual system_prompt conflict resolved by combining RAG+user prompts. Zero regressions across 702 tests (686 + 16 new sprint tests).
   - **SP-01-01** ✅ closed (2026-05-06): Test Infrastructure + Normalizer — 3-source normalizer (eBay, Depop, Poshmark) with condition mapping, price coercion, and full unit test coverage. 29/29 tests passing.
   - **SP-01-02** ✅ closed (2026-05-09): eBay Source Adapter — OAuth client credentials grant, token caching in ETS, mocked search endpoint. 15/15 tests passing.
   - **SP-01-03** ✅ closed (2026-05-10): Depop Source Adapter — HTTP search with Mozilla/5.0 + en-US headers, raw JSON pass-through, nil-field handling. 13/13 tests passing.
@@ -72,11 +76,14 @@ Phase 4 transforms the app into an AI style consultant for second-hand clothing.
 - **Phase 4.2 — Hybrid Search (in progress):**
   - **SP-02-01** ✅ closed (2026-05-11): Embedder + Test Fixtures — `ChatApp.AI.Embedder.embed/1` and `embed_batch/1` with OpenAI `text-embedding-3-small` (512 dims), L2 normalization, and dimension validation. Three committed fixture vectors (vintage jacket, evening gown, denim jacket) for downstream sprint tests. 14/14 tests passing. **Critical issues found and fixed during QA: nil-embedding handling via `Enum.reduce_while` (not `Enum.find`), out-of-order API response reordering, malformed response guard, test env cleanup via `setup_bypass` `on_exit`.**
   - **SP-02-02** ✅ closed (2026-05-11): QueryProcessor — Lowercase, stopword removal (preserving size terms), synonym expansion with OR grouping, and FTS5 operator safety. Pure-function text normalization pipeline. 19/19 tests passing. **QA review identified 4 spec ambiguities; resolved all with user guidance (lowercase OR, apostrophe stripping, stopword list pruning, per-token escaping timing). No regressions across 599 non-feature tests.** Next sprint dependency ready: FTS5Index implementation.
-- **Phases 4.3–4.4:** Chat RAG, UI (draft).
+  - **SP-02-03** ✅ closed (2026-05-11): VectorStore — SQLite-vec search with L2 distance ranking and batch upsert. 13/13 tests passing.
+  - **SP-02-04** ✅ closed (2026-05-12): FTS5Index — Full-text search with BM25 ranking and delete-then-insert upsert pattern for external content tables. 17/17 tests passing (3 unit, 11 integration, 3 E2E). Fixed critical issues during QA: nil BM25 scores, dual implementation divergence, missing transaction atomicity, overly broad error rescue.
+  - **SP-02-05a** ✅ closed (2026-05-12): HybridEngine Core — RRF fusion of vector and FTS5 results with concurrent task execution and flexible filtering. 14/14 tests passing. Zero regressions across 654 tests.
+  - **SP-02-05b** ✅ closed (2026-05-12): Filter Opts + Public API — Size/price/source filtering on HybridEngine.search/2 with case-insensitive matching and type-safe guard patterns. 15/15 tests passing. Zero regressions.
+  - **SP-04-03** ✅ closed (2026-05-12): StyleAdvisor.augment/2 — Token budget capping (10 items / 8 items), HybridEngine indirection via Application.get_env, error fallback to base prompt, and full test suite (E2E with Bypass embedder stub). 16/16 sprint tests passing. QA audit identified missing @behaviour declaration on HybridEngine and unnecessary async:false on unit tests — both fixed. Carry-forward note: `build_prompt/2` raises KeyError on unknown source label; `@source_labels` must be updated when new scrapers are added.
+- **Phases 4.4–4.5:** Chat RAG, UI (draft).
 
-- **SP-02-04** ✅ closed (2026-05-12): FTS5Index — Full-text search with BM25 ranking and delete-then-insert upsert pattern for external content tables. 17/17 tests passing (3 unit, 11 integration, 3 E2E). Fixed critical issues during QA: nil BM25 scores, dual implementation divergence, missing transaction atomicity, overly broad error rescue.
-
-**Next active sprint:** SP-02-05a — HybridEngine Core (Phase 2). See [`phases/overview.md`](phases/overview.md) for dependency map and locked decisions.
+**Next active sprint:** SP-04-05 — Card Rendering + Smoke Test (Phase 4.3). See [`sprints/planned/SP-04-05-card-rendering-and-smoke.md`](sprints/planned/SP-04-05-card-rendering-and-smoke.md) for scope and locked decisions.
 
 ## Audit Notes
 

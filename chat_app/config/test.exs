@@ -28,6 +28,8 @@ config :chat_app, :openai_api_key, "sk-test-stub"
 config :chat_app, :ebay_app_id, "test_app_id"
 config :chat_app, :ebay_cert_id, "test_cert_id"
 config :chat_app, :openai_module, ChatApp.OpenAI.Stub
+config :chat_app, :hybrid_engine_module, ChatApp.Search.MockHybridEngine
+config :chat_app, :style_advisor_module, ChatApp.AI.MockStyleAdvisor
 config :chat_app, :req_options, plug: {Req.Test, ChatApp.OpenAI}
 config :chat_app, :allow_hero_override, true
 config :chat_app, :disable_rate_limit, false

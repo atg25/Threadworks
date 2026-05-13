@@ -122,7 +122,10 @@ defmodule ChatAppWeb.ChatLiveSettingsTest do
       assert_in_delta body["temperature"], 0.4, 0.001
 
       messages = body["messages"]
-      assert Enum.any?(messages, &(&1["role"] == "system" and &1["content"] == "Be terse."))
+      # RAG-augmented prompt is the base; user's system_prompt is appended after it.
+      assert Enum.any?(messages, fn m ->
+        m["role"] == "system" and String.contains?(m["content"], "Be terse.")
+      end)
     end
   end
 end

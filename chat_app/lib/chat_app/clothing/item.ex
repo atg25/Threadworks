@@ -16,6 +16,7 @@ defmodule ChatApp.Clothing.Item do
     field :source_id, :string
     field :condition_normalized, :string
     field :last_scraped_at, :utc_datetime
+    field :rrf_score, :float, virtual: true
 
     timestamps(type: :utc_datetime)
   end

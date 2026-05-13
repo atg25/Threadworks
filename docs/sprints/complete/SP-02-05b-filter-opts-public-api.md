@@ -2,8 +2,10 @@
 id: SP-02-05b
 phase: 2
 slug: filter-opts-public-api
-status: planned
+status: complete
 created: 2026-05-11
+activated_date: 2026-05-12
+completed_date: 2026-05-12
 depends_on:
   - SP-02-05a  # HybridEngine core must be complete and all core tests green
 estimated_days: 1
@@ -109,32 +111,32 @@ If the spec author intended exact match, this decision must be overridden before
 
 ## Implementation Tasks
 
-- [ ] Write all integration tests I-01 through I-09 — all fail
-- [ ] Write E2E tests E-01, E-02 — all fail
-- [ ] Extend `HybridEngine.search/2` to accept and apply opt filters:
-  - [ ] Extract `limit` from opts (default `10`); apply `Enum.take(rrf_list, limit)` before DB fetch
-  - [ ] Build the DB query with dynamic WHERE conditions:
-    - [ ] `source` filter: `where: i.source == ^source` (convert atom to string)
-    - [ ] `max_price` filter: `where: i.price <= ^max_price`
-    - [ ] `size` filter: `where: fragment("LOWER(?)", i.size) == fragment("LOWER(?)", ^size)`
-  - [ ] All active filters are AND-composed in a single query
-  - [ ] `limit: 0` handled before DB fetch (return `{:ok, []}` immediately)
-- [ ] Add `search_hybrid/2` to `lib/chat_app/clothing.ex`:
+- [x] Write all integration tests I-01 through I-09 — all fail
+- [x] Write E2E tests E-01, E-02 — all fail
+- [x] Extend `HybridEngine.search/2` to accept and apply opt filters:
+  - [x] Extract `limit` from opts (default `10`); apply `Enum.take(rrf_list, limit)` before DB fetch
+  - [x] Build the DB query with dynamic WHERE conditions:
+    - [x] `source` filter: `where: i.source == ^source` (convert atom to string)
+    - [x] `max_price` filter: `where: i.price <= ^max_price`
+    - [x] `size` filter: `where: fragment("LOWER(?)", i.size) == fragment("LOWER(?)", ^size)`
+  - [x] All active filters are AND-composed in a single query
+  - [x] `limit: 0` handled before DB fetch (return `{:ok, []}` immediately)
+- [x] Add `search_hybrid/2` to `lib/chat_app/clothing.ex`:
   ```elixir
   def search_hybrid(query_text, opts \\ []) do
     ChatApp.Search.HybridEngine.search(query_text, opts)
   end
   ```
-- [ ] Run all tests — all green
-- [ ] Run full phase 2 test suite — all previously green tests remain green
+- [x] Run all tests — all green
+- [x] Run full phase 2 test suite — all previously green tests remain green
 
 ---
 
 ## Definition of Done
 
-- [ ] All 11 tests green (`mix test test/integration/search/hybrid_engine_filter_test.exs`)
-- [ ] Multiple filters compose with AND semantics (I-07 green)
-- [ ] `limit: 0` returns `{:ok, []}` (I-05 green)
-- [ ] `Clothing.search_hybrid/2` is the only public entry point — `HybridEngine` is not called directly from outside the `Search` namespace
-- [ ] Full suite (`mix test`) green — no regressions in SP-02-05a tests
-- [ ] `HybridEngine` module is not referenced directly in any controller, LiveView, or context module other than `ChatApp.Clothing`
+- [x] All 11 tests green (`mix test test/integration/search/hybrid_engine_filter_test.exs`)
+- [x] Multiple filters compose with AND semantics (I-07 green)
+- [x] `limit: 0` returns `{:ok, []}` (I-05 green)
+- [x] `Clothing.search_hybrid/2` is the only public entry point — `HybridEngine` is not called directly from outside the `Search` namespace
+- [x] Full suite (`mix test`) green — no regressions in SP-02-05a tests
+- [x] `HybridEngine` module is not referenced directly in any controller, LiveView, or context module other than `ChatApp.Clothing`

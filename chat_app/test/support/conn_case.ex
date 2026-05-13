@@ -38,6 +38,24 @@ defmodule ChatAppWeb.ConnCase do
       Ecto.Adapters.SQL.Sandbox.mode(ChatApp.Repo, {:shared, self()})
     end
 
+    # Default stub for MockStyleAdvisor: returns two high-score items so the
+    # :recommend path is taken, keeping all existing streaming tests intact.
+    # Tests that need different behaviour override this stub in their own setup.
+    Mox.stub(ChatApp.AI.MockStyleAdvisor, :augment, fn _text, _opts ->
+      item = %ChatApp.Clothing.Item{
+        id: nil,
+        title: "Test Item",
+        size: "M",
+        condition: "good",
+        price: Decimal.new("30.00"),
+        source: "ebay",
+        url: "http://example.com",
+        rrf_score: 0.05
+      }
+
+      {:ok, "You are Threadworks AI, a style consultant.", [item, item]}
+    end)
+
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 

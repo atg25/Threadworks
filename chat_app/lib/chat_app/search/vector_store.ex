@@ -19,8 +19,12 @@ defmodule ChatApp.Search.VectorStore do
     blob = VectorCodec.encode(vector)
     # vec0 virtual tables do not honour the OR REPLACE conflict clause, so we
     # delete the existing row first to achieve idempotent upsert semantics.
-    Repo.query!("DELETE FROM clothing_vec WHERE rowid = ?", [item_id])
-    Repo.query!("INSERT INTO clothing_vec(rowid, embedding) VALUES (?, ?)", [item_id, {:blob, blob}])
+    # Wrapped in a transaction so a failed INSERT after a successful DELETE does
+    # not permanently orphan the item from the index.
+    Repo.transaction(fn ->
+      Repo.query!("DELETE FROM clothing_vec WHERE rowid = ?", [item_id])
+      Repo.query!("INSERT INTO clothing_vec(rowid, embedding) VALUES (?, ?)", [item_id, {:blob, blob}])
+    end)
     :ok
   end
 
