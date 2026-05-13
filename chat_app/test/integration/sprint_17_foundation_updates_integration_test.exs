@@ -12,7 +12,7 @@ defmodule ChatAppWeb.Sprint17FoundationUpdatesIntegrationTest do
       """)
 
     refute html =~ "/35"
-    assert html =~ "bg-opacity-10"
-    assert html =~ "var(--status-error)"
+    assert html =~ "alert-error"
+    assert html =~ "toast-top"
   end
 end

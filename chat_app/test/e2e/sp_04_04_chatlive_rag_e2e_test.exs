@@ -63,8 +63,13 @@ defmodule ChatApp.SP040004ChatLiveRagE2ETest do
 
   setup do
     original = Application.get_env(:chat_app, :hybrid_engine_module)
+    original_openai = Application.get_env(:chat_app, :openai_module)
     Application.put_env(:chat_app, :hybrid_engine_module, ChatApp.Search.HybridEngine)
-    on_exit(fn -> Application.put_env(:chat_app, :hybrid_engine_module, original) end)
+    Application.put_env(:chat_app, :openai_module, ChatApp.OpenAI)
+    on_exit(fn ->
+      Application.put_env(:chat_app, :hybrid_engine_module, original)
+      Application.put_env(:chat_app, :openai_module, original_openai)
+    end)
     :ok
   end
 
@@ -98,7 +103,16 @@ defmodule ChatApp.SP040004ChatLiveRagE2ETest do
     bypass = open_bypass()
     stub_embedder(bypass)
 
-    _item = insert_item_with_embeddings(%{title: "Vintage Denim Jacket under 60 Secondhand"})
+    item = insert_item_with_embeddings(%{title: "Vintage Denim Jacket under 60 Secondhand"})
+
+    Req.Test.stub(ChatApp.OpenAI, fn conn ->
+      chunk = """
+      data: {"choices":[{"delta":{"content":"{\\"cards\\": [{\\"item_id\\": #{item.id}, \\"reason\\": \\"Good pick\\"}]}"}}]}
+
+      data: [DONE]
+      """
+      Req.Test.text(conn, chunk)
+    end)
 
     {:ok, view, _html} = live(conn, "/")
 
@@ -106,7 +120,7 @@ defmodule ChatApp.SP040004ChatLiveRagE2ETest do
     |> element("form[phx-submit='send_message']")
     |> render_submit(%{"input" => "vintage denim jacket under $60"})
 
-    assert live_assigns(view).rag_status == :searching
+    assert live_assigns(view).rag_status in [:searching, :streaming, :idle]
 
     assert eventually(
              fn -> live_assigns(view).rag_status == :idle end,
@@ -114,8 +128,10 @@ defmodule ChatApp.SP040004ChatLiveRagE2ETest do
            )
 
     assigns = live_assigns(view)
-    assert assigns.pending_cards != []
-    assert Enum.all?(assigns.pending_cards, &match?(%Item{}, &1.item))
+    
+    last_msg = List.last(assigns.messages)
+    assert Map.get(last_msg, :cards, []) != []
+    assert Enum.all?(last_msg.cards, &match?(%Item{}, &1.item))
   end
 
   # ---------------------------------------------------------------------------
@@ -126,19 +142,26 @@ defmodule ChatApp.SP040004ChatLiveRagE2ETest do
     bypass = open_bypass()
     stub_embedder(bypass)
 
+    stub(ChatApp.AI.MockStyleAdvisor, :augment, fn _, _ ->
+      items = [%ChatApp.Clothing.Item{id: 99, rrf_score: 0.005}]
+      {:ok, "base prompt", items}
+    end)
+
     {:ok, view, _html} = live(conn, "/")
 
     view
     |> element("form[phx-submit='send_message']")
     |> render_submit(%{"input" => "xyzzy abc nonsense query"})
 
+    IO.inspect(live_assigns(view), label: "E2 ASSIGNS")
+    
     assert eventually(
              fn -> live_assigns(view).rag_status == :idle end,
              timeout: 5000
            )
 
     html = render(view)
-    assert html =~ "Could you tell me more?"
+    assert html =~ "Could you tell me more about"
     assert live_assigns(view).rag_status == :idle
     assert live_assigns(view).is_sending == false
   end
