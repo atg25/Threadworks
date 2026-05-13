@@ -18,7 +18,21 @@ defmodule ChatApp.AI.Embedder do
   each `vec` is a 512-element L2-normalized float list, or `{:error, reason}`.
   """
   def embed_batch(texts) when is_list(texts) do
-    url = Application.get_env(:chat_app, :openai_embeddings_url, "https://api.openai.com/v1/embeddings")
+    if ChatApp.Demo.enabled?() do
+      {:ok, Enum.map(texts, &ChatApp.Demo.vector_for_text/1)}
+    else
+      embed_batch_openai(texts)
+    end
+  end
+
+  defp embed_batch_openai(texts) do
+    url =
+      Application.get_env(
+        :chat_app,
+        :openai_embeddings_url,
+        "https://api.openai.com/v1/embeddings"
+      )
+
     api_key = Application.get_env(:chat_app, :openai_api_key)
 
     body = %{

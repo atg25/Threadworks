@@ -64,6 +64,7 @@ defmodule ChatApp.SP0204FTS5IndexE2ETest do
     if length(result) > 1 do
       scores = Enum.map(result, fn {_, s} -> s end)
       [s1 | _rest] = scores
+
       assert s1 == Enum.min(scores),
              "expected first result to have the most negative (min) score, got: #{inspect(scores)}"
     end

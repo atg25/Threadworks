@@ -71,7 +71,13 @@ defmodule ChatApp.ETL.Workers.EmbedWorkerTest do
 
   defp setup_bypass do
     bypass = Bypass.open()
-    Application.put_env(:chat_app, :openai_embeddings_url, "http://localhost:#{bypass.port}/v1/embeddings")
+
+    Application.put_env(
+      :chat_app,
+      :openai_embeddings_url,
+      "http://localhost:#{bypass.port}/v1/embeddings"
+    )
+
     bypass
   end
 
@@ -98,7 +104,6 @@ defmodule ChatApp.ETL.Workers.EmbedWorkerTest do
     perform(ids)
 
     assert Agent.get(counter, & &1) == 1
-
   end
 
   # ---------------------------------------------------------------------------
@@ -126,10 +131,12 @@ defmodule ChatApp.ETL.Workers.EmbedWorkerTest do
     perform(ids)
 
     body = Agent.get(captured, & &1)
-    assert body["dimensions"] == 512, "expected dimensions: 512 in request body, got: #{inspect(body["dimensions"])}"
+
+    assert body["dimensions"] == 512,
+           "expected dimensions: 512 in request body, got: #{inspect(body["dimensions"])}"
+
     assert body["model"] == "text-embedding-3-small"
     assert length(body["input"]) == 20
-
   end
 
   # ---------------------------------------------------------------------------
@@ -146,13 +153,12 @@ defmodule ChatApp.ETL.Workers.EmbedWorkerTest do
 
     perform(ids)
 
-    stored = Repo.all(from i in ClothingItem, where: i.id in ^ids)
+    stored = Repo.all(from(i in ClothingItem, where: i.id in ^ids))
 
     assert Enum.all?(stored, fn i ->
              is_binary(i.embedding) and byte_size(i.embedding) == 2048
            end),
            "expected all items to have 2048-byte binary embeddings"
-
   end
 
   # ---------------------------------------------------------------------------
@@ -169,9 +175,10 @@ defmodule ChatApp.ETL.Workers.EmbedWorkerTest do
 
     perform(ids)
 
-    %{rows: [[count]]} = Repo.query!("SELECT count(*) FROM clothing_vec WHERE rowid IN (#{Enum.join(ids, ",")})")
-    assert count == 20, "expected 20 rows in clothing_vec, got #{count}"
+    %{rows: [[count]]} =
+      Repo.query!("SELECT count(*) FROM clothing_vec WHERE rowid IN (#{Enum.join(ids, ",")})")
 
+    assert count == 20, "expected 20 rows in clothing_vec, got #{count}"
   end
 
   # ---------------------------------------------------------------------------
@@ -198,8 +205,9 @@ defmodule ChatApp.ETL.Workers.EmbedWorkerTest do
       Repo.query!("SELECT rowid FROM clothing_fts WHERE clothing_fts MATCH ?", ["windbreaker"])
 
     rowids = List.flatten(rows)
-    assert item.id in rowids, "expected item id #{item.id} in FTS results, got: #{inspect(rowids)}"
 
+    assert item.id in rowids,
+           "expected item id #{item.id} in FTS results, got: #{inspect(rowids)}"
   end
 
   # ---------------------------------------------------------------------------
@@ -221,7 +229,6 @@ defmodule ChatApp.ETL.Workers.EmbedWorkerTest do
 
     assert result == {:error, :embedding_count_mismatch},
            "expected {:error, :embedding_count_mismatch}, got: #{inspect(result)}"
-
   end
 
   # ---------------------------------------------------------------------------
@@ -243,7 +250,6 @@ defmodule ChatApp.ETL.Workers.EmbedWorkerTest do
     result = perform(ids_with_stale)
 
     assert result == :ok, "expected :ok when stale id included, got: #{inspect(result)}"
-
   end
 
   # ---------------------------------------------------------------------------
@@ -270,7 +276,6 @@ defmodule ChatApp.ETL.Workers.EmbedWorkerTest do
              is_list(emb) and length(emb) == 512 and Enum.all?(emb, &is_float/1)
            end),
            "expected each embedding to be a list of 512 floats"
-
   end
 
   # ---------------------------------------------------------------------------
@@ -294,8 +299,9 @@ defmodule ChatApp.ETL.Workers.EmbedWorkerTest do
     Embedder.embed_batch(["hello"])
 
     body = Agent.get(captured, & &1)
-    assert body["dimensions"] == 512, "expected dimensions: 512 in request body, got: #{inspect(body["dimensions"])}"
 
+    assert body["dimensions"] == 512,
+           "expected dimensions: 512 in request body, got: #{inspect(body["dimensions"])}"
   end
 
   # ---------------------------------------------------------------------------
@@ -352,7 +358,7 @@ defmodule ChatApp.ETL.Workers.EmbedWorkerTest do
            "expected both concurrent jobs to return :ok, got: #{inspect(results)}"
 
     # All 40 items must have non-nil embeddings
-    stored = Repo.all(from i in ClothingItem, where: i.id in ^all_ids)
+    stored = Repo.all(from(i in ClothingItem, where: i.id in ^all_ids))
 
     assert Enum.all?(stored, fn i -> not is_nil(i.embedding) end),
            "expected all 40 items to have embeddings after concurrent jobs"
@@ -367,6 +373,5 @@ defmodule ChatApp.ETL.Workers.EmbedWorkerTest do
                String.contains?(inspect(result), "SQLITE_BUSY"),
              "SQLite busy_timeout error detected: #{inspect(result)}"
     end
-
   end
 end

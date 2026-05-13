@@ -24,7 +24,16 @@ defmodule ChatApp.Migrations.PriceHistoryTest do
           (title, brand, price, url, source, source_id, inserted_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        ["Test Item", "TestBrand", "10.00", url, "ebay", "item-#{System.unique_integer()}", ts, ts]
+        [
+          "Test Item",
+          "TestBrand",
+          "10.00",
+          url,
+          "ebay",
+          "item-#{System.unique_integer()}",
+          ts,
+          ts
+        ]
       )
 
     {:ok, row} = Ecto.Adapters.SQL.query(ChatApp.Repo, "SELECT last_insert_rowid()", [])

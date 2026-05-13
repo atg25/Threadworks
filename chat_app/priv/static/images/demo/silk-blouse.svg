@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-label="Cream silk blouse">
+  <rect width="640" height="480" fill="#eef1f4"/>
+  <path d="M202 110 292 70h56l90 40 42 290H160z" fill="#fff7e8"/>
+  <path d="M292 76 320 176 348 76M320 176v222" stroke="#d8c9af" stroke-width="9" stroke-linecap="round"/>
+  <path d="M220 134 162 322M420 134l58 188" stroke="#eadcc4" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="336" cy="230" r="7" fill="#c9b58f"/>
+  <circle cx="336" cy="282" r="7" fill="#c9b58f"/>
+  <text x="320" y="445" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#1f2937">Silk Blouse</text>
+</svg>

@@ -6,6 +6,7 @@ defmodule ChatAppWeb.Sprint19ADesktopLayoutE2ETest do
   feature "sidebar collapses and expands via header toggle on desktop", %{session: session} do
     session =
       session
+      |> resize_window(1280, 900)
       |> visit("/")
       |> execute_script("""
       (() => {
@@ -63,6 +64,7 @@ defmodule ChatAppWeb.Sprint19ADesktopLayoutE2ETest do
   feature "API cost tracker is completely removed from the DOM", %{session: session} do
     session =
       session
+      |> resize_window(1280, 900)
       |> visit("/")
       |> refute_has(Query.css("[data-usage-cost]"))
 
@@ -72,6 +74,7 @@ defmodule ChatAppWeb.Sprint19ADesktopLayoutE2ETest do
   feature "header icon buttons are keyboard accessible", %{session: session} do
     session =
       session
+      |> resize_window(1280, 900)
       |> visit("/")
       |> assert_has(Query.css("button[data-sidebar-toggle='true'].focus-ring"))
       |> assert_has(Query.css("button[data-new-chat-trigger='true'].focus-ring"))
@@ -92,6 +95,7 @@ defmodule ChatAppWeb.Sprint19ADesktopLayoutE2ETest do
   feature "sidebar toggle does not vertically shift the transcript viewport", %{session: session} do
     session =
       session
+      |> resize_window(1280, 900)
       |> visit("/")
       |> execute_script("""
       (() => {

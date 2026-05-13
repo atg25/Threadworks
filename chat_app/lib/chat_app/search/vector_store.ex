@@ -23,8 +23,13 @@ defmodule ChatApp.Search.VectorStore do
     # not permanently orphan the item from the index.
     Repo.transaction(fn ->
       Repo.query!("DELETE FROM clothing_vec WHERE rowid = ?", [item_id])
-      Repo.query!("INSERT INTO clothing_vec(rowid, embedding) VALUES (?, ?)", [item_id, {:blob, blob}])
+
+      Repo.query!("INSERT INTO clothing_vec(rowid, embedding) VALUES (?, ?)", [
+        item_id,
+        {:blob, blob}
+      ])
     end)
+
     :ok
   end
 

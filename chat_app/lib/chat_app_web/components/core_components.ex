@@ -445,10 +445,11 @@ defmodule ChatAppWeb.CoreComponents do
   """
   attr :name, :string, required: true
   attr :class, :any, default: "size-4"
+  attr :rest, :global, doc: "additional arbitrary HTML attributes (data-*, aria-*, etc.)"
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
-    <span class={[@name, @class]} />
+    <span class={[@name, @class]} {@rest} />
     """
   end
 

@@ -47,9 +47,27 @@ defmodule ChatApp.AI.StyleAdvisorTest do
     # U2 — Exactly N item lines with correct format
     test "U2: exactly N item lines with correct format" do
       items = [
-        %Item{title: "Levi's 501",    size: "28x30", condition: :good,     price: Decimal.new("45.00"), source: :ebay},
-        %Item{title: "CK Blazer",     size: "M",     condition: :like_new, price: Decimal.new("78.00"), source: :depop},
-        %Item{title: "Floral Blouse", size: "S",     condition: :fair,     price: Decimal.new("22.00"), source: :poshmark}
+        %Item{
+          title: "Levi's 501",
+          size: "28x30",
+          condition: :good,
+          price: Decimal.new("45.00"),
+          source: :ebay
+        },
+        %Item{
+          title: "CK Blazer",
+          size: "M",
+          condition: :like_new,
+          price: Decimal.new("78.00"),
+          source: :depop
+        },
+        %Item{
+          title: "Floral Blouse",
+          size: "S",
+          condition: :fair,
+          price: Decimal.new("22.00"),
+          source: :poshmark
+        }
       ]
 
       result = StyleAdvisor.build_prompt("base", items)
@@ -61,6 +79,7 @@ defmodule ChatApp.AI.StyleAdvisorTest do
     # U3 — Base prompt appears before AVAILABLE ITEMS block
     test "U3: base prompt appears before AVAILABLE ITEMS block" do
       base = "You are a style advisor."
+
       item = %Item{
         title: "Jeans",
         size: "M",
@@ -70,7 +89,7 @@ defmodule ChatApp.AI.StyleAdvisorTest do
       }
 
       result = StyleAdvisor.build_prompt(base, [item])
-      base_pos  = :binary.match(result, base) |> elem(0)
+      base_pos = :binary.match(result, base) |> elem(0)
       items_pos = :binary.match(result, "AVAILABLE ITEMS:") |> elem(0)
       assert base_pos < items_pos
     end
@@ -79,7 +98,13 @@ defmodule ChatApp.AI.StyleAdvisorTest do
     test "U4: item numbering is 1-based and sequential" do
       items =
         for _ <- 1..3,
-            do: %Item{title: "X", size: "M", condition: :good, price: Decimal.new("10.00"), source: :ebay}
+            do: %Item{
+              title: "X",
+              size: "M",
+              condition: :good,
+              price: Decimal.new("10.00"),
+              source: :ebay
+            }
 
       result = StyleAdvisor.build_prompt("base", items)
       assert String.contains?(result, "[1]")

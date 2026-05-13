@@ -20,7 +20,8 @@ defmodule ChatAppWeb.FeatureCase do
 
   using do
     quote do
-      use Wallaby.Feature
+      use Wallaby.DSL
+      import Wallaby.Feature
       import Wallaby.Query
       import Wallaby.Browser
       alias Wallaby.Query
@@ -30,9 +31,25 @@ defmodule ChatAppWeb.FeatureCase do
   setup tags do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(ChatApp.Repo)
     Ecto.Adapters.SQL.Sandbox.mode(ChatApp.Repo, {:shared, self()})
+    Mox.set_mox_global()
 
     # Keep feature tests isolated: reset persisted conversation rows between tests.
     Repo.delete_all(Conversation)
+
+    Mox.stub(ChatApp.AI.MockStyleAdvisor, :augment, fn _text, _opts ->
+      item = %ChatApp.Clothing.Item{
+        id: nil,
+        title: "Test Item",
+        size: "M",
+        condition: "good",
+        price: Decimal.new("30.00"),
+        source: "ebay",
+        url: "http://example.com",
+        rrf_score: 0.05
+      }
+
+      {:ok, "You are Threadworks AI, a style consultant.", [item, item]}
+    end)
 
     # Switch to E2EStub for the duration of the test, restore on exit.
     original_module = Application.get_env(:chat_app, :openai_module)
@@ -47,8 +64,10 @@ defmodule ChatAppWeb.FeatureCase do
       end
     end)
 
-    # Wallaby.Feature injects a :session key; this setup merges
-    # our keys into whatever Wallaby already put in the context.
-    {:ok, tags}
+    metadata = Phoenix.Ecto.SQL.Sandbox.metadata_for([ChatApp.Repo], self())
+    {:ok, session} = Wallaby.start_session(metadata: metadata)
+    session = Wallaby.Browser.resize_window(session, 1280, 900)
+
+    {:ok, Map.put(tags, :session, session)}
   end
 end

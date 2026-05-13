@@ -21,6 +21,7 @@ defmodule ChatApp.Migrations.MigrationIntegrationTest do
 
     # Migration 2 — enhance_clothing_items (source column is the sentinel)
     names = column_names("clothing_items")
+
     assert "source" in names,
            "clothing_items.source column missing — enhance_clothing_items migration did not run"
 

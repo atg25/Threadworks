@@ -30,6 +30,91 @@ defmodule ChatAppWeb.UserLive.Settings do
 
       <div class="divider" />
 
+      <.form for={%{}} id="preferences_form" phx-submit="save_preferences">
+        <fieldset>
+          <legend class="label mb-1">Sizes</legend>
+          <label for="preferences_sizes_s">
+            <input
+              id="preferences_sizes_s"
+              type="checkbox"
+              name="preferences[sizes][]"
+              value="S"
+              checked={"S" in @preferences.sizes}
+            /> S
+          </label>
+          <label for="preferences_sizes_m">
+            <input
+              id="preferences_sizes_m"
+              type="checkbox"
+              name="preferences[sizes][]"
+              value="M"
+              checked={"M" in @preferences.sizes}
+            /> M
+          </label>
+          <label for="preferences_sizes_l">
+            <input
+              id="preferences_sizes_l"
+              type="checkbox"
+              name="preferences[sizes][]"
+              value="L"
+              checked={"L" in @preferences.sizes}
+            /> L
+          </label>
+        </fieldset>
+
+        <label for="preferences_brands">
+          <span class="label mb-1">Brands</span>
+          <input
+            id="preferences_brands"
+            type="text"
+            name="preferences[brands]"
+            value={@preferences.brands}
+          />
+        </label>
+
+        <label for="preferences_budget_min">
+          <span class="label mb-1">Budget min</span>
+          <input
+            id="preferences_budget_min"
+            type="number"
+            step="0.01"
+            name="preferences[budget_min]"
+            value={@preferences.budget_min}
+          />
+          <p :for={error <- preference_errors(@preference_errors, :budget_min)} class="text-error">
+            {error}
+          </p>
+        </label>
+
+        <label for="preferences_budget_max">
+          <span class="label mb-1">Budget max</span>
+          <input
+            id="preferences_budget_max"
+            type="number"
+            step="0.01"
+            name="preferences[budget_max]"
+            value={@preferences.budget_max}
+          />
+          <p :for={error <- preference_errors(@preference_errors, :budget_max)} class="text-error">
+            {error}
+          </p>
+        </label>
+
+        <label for="preferences_style_keywords">
+          <span class="label mb-1">Style keywords</span>
+          <input
+            id="preferences_style_keywords"
+            type="text"
+            name="preferences[style_keywords]"
+            value={@preferences.style_keywords}
+          />
+        </label>
+
+        <.button variant="primary" phx-disable-with="Saving...">Save Preferences</.button>
+      </.form>
+
+      <div class="divider" />
+
       <.form
         for={@password_form}
         id="password_form"
@@ -87,12 +172,15 @@ defmodule ChatAppWeb.UserLive.Settings do
     user = socket.assigns.current_scope.user
     email_changeset = Accounts.change_user_email(user, %{}, validate_unique: false)
     password_changeset = Accounts.change_user_password(user, %{}, hash_password: false)
+    preferences = user.id |> Accounts.get_user_preferences() |> preferences_for_form()
 
     socket =
       socket
       |> assign(:current_email, user.email)
       |> assign(:email_form, to_form(email_changeset))
       |> assign(:password_form, to_form(password_changeset))
+      |> assign(:preferences, preferences)
+      |> assign(:preference_errors, %{})
       |> assign(:trigger_submit, false)
 
     {:ok, socket}
@@ -156,5 +244,76 @@ defmodule ChatAppWeb.UserLive.Settings do
       changeset ->
         {:noreply, assign(socket, password_form: to_form(changeset, action: :insert))}
     end
+  end
+
+  def handle_event("save_preferences", %{"preferences" => attrs}, socket) do
+    user = socket.assigns.current_scope.user
+
+    case Accounts.save_preferences(user.id, attrs) do
+      {:ok, _preferences} ->
+        updated_preferences = user.id |> Accounts.get_user_preferences() |> preferences_for_form()
+
+        {:noreply,
+         socket
+         |> assign(:preferences, updated_preferences)
+         |> assign(:preference_errors, %{})
+         |> put_flash(:info, "Preferences saved")}
+
+      {:error, changeset} ->
+        {:noreply,
+         socket
+         |> assign(:preference_errors, preference_errors_from_changeset(changeset))
+         |> put_flash(:error, "Could not save preferences")}
+    end
+  end
+
+  defp preferences_for_form(nil) do
+    %{sizes: [], brands: "", budget_min: "", budget_max: "", style_keywords: ""}
+  end
+
+  defp preferences_for_form(preferences) do
+    %{
+      sizes: decode_json_array(preferences.sizes),
+      brands: join_csv(preferences.brands),
+      budget_min: decimal_for_input(preferences.budget_min),
+      budget_max: decimal_for_input(preferences.budget_max),
+      style_keywords: join_csv(preferences.style_keywords)
+    }
+  end
+
+  defp decode_json_array(nil), do: []
+
+  defp decode_json_array(raw) when is_binary(raw) do
+    case Jason.decode(raw) do
+      {:ok, decoded} when is_list(decoded) -> decoded
+      _ -> []
+    end
+  end
+
+  defp join_csv(raw) do
+    raw
+    |> decode_json_array()
+    |> Enum.join(", ")
+  end
+
+  defp decimal_for_input(nil), do: ""
+  defp decimal_for_input(value) when is_binary(value), do: trim_decimal_string(value)
+  defp decimal_for_input(value), do: value |> Decimal.to_string(:normal) |> trim_decimal_string()
+
+  defp trim_decimal_string(value) do
+    value
+    |> String.trim()
+    |> String.trim_trailing("0")
+    |> String.trim_trailing(".")
+  end
+
+  defp preference_errors(errors, field), do: Map.get(errors, field, [])
+
+  defp preference_errors_from_changeset(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
+      Enum.reduce(opts, message, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+    end)
   end
 end

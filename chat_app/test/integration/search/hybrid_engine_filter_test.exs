@@ -33,13 +33,25 @@ defmodule ChatApp.Search.HybridEngineFilterIntegrationTest do
   defp open_bypass do
     bypass = Bypass.open()
     original = Application.get_env(:chat_app, :openai_embeddings_url)
-    Application.put_env(:chat_app, :openai_embeddings_url, "http://localhost:#{bypass.port}/v1/embeddings")
+
+    Application.put_env(
+      :chat_app,
+      :openai_embeddings_url,
+      "http://localhost:#{bypass.port}/v1/embeddings"
+    )
+
     on_exit(fn -> Application.put_env(:chat_app, :openai_embeddings_url, original) end)
     bypass
   end
 
   defp insert_item(attrs) do
-    base = %{source: "ebay", price: "25.00", title: "Vintage Jacket", url: "http://e.com/#{System.unique_integer()}"}
+    base = %{
+      source: "ebay",
+      price: "25.00",
+      title: "Vintage Jacket",
+      url: "http://e.com/#{System.unique_integer()}"
+    }
+
     {:ok, item} = Repo.insert(Item.changeset(%Item{}, Map.merge(base, attrs)))
     item
   end
@@ -57,8 +69,15 @@ defmodule ChatApp.Search.HybridEngineFilterIntegrationTest do
     bypass = open_bypass()
     stub_embedder(bypass)
 
-    ebay_item = insert_item(%{source: "ebay", title: "Vintage Jacket eBay", url: "http://e.com/i01-ebay"})
-    depop_item = insert_item(%{source: "depop", title: "Vintage Jacket Depop", url: "http://e.com/i01-depop"})
+    ebay_item =
+      insert_item(%{source: "ebay", title: "Vintage Jacket eBay", url: "http://e.com/i01-ebay"})
+
+    depop_item =
+      insert_item(%{
+        source: "depop",
+        title: "Vintage Jacket Depop",
+        url: "http://e.com/i01-depop"
+      })
 
     upsert_both(ebay_item)
     upsert_both(depop_item)
@@ -83,8 +102,10 @@ defmodule ChatApp.Search.HybridEngineFilterIntegrationTest do
     stub_embedder(bypass)
 
     cheap = insert_item(%{price: "10.00", title: "Jacket Cheap", url: "http://e.com/i02-cheap"})
-    mid   = insert_item(%{price: "50.00", title: "Jacket Mid", url: "http://e.com/i02-mid"})
-    pricey = insert_item(%{price: "200.00", title: "Jacket Pricey", url: "http://e.com/i02-pricey"})
+    mid = insert_item(%{price: "50.00", title: "Jacket Mid", url: "http://e.com/i02-mid"})
+
+    pricey =
+      insert_item(%{price: "200.00", title: "Jacket Pricey", url: "http://e.com/i02-pricey"})
 
     upsert_both(cheap)
     upsert_both(mid)
@@ -109,9 +130,14 @@ defmodule ChatApp.Search.HybridEngineFilterIntegrationTest do
     bypass = open_bypass()
     stub_embedder(bypass)
 
-    size_lower = insert_item(%{size: "m", title: "Jacket Size m lowercase", url: "http://e.com/i03-lower"})
-    size_upper = insert_item(%{size: "M", title: "Jacket Size M uppercase", url: "http://e.com/i03-upper"})
-    size_large = insert_item(%{size: "L", title: "Jacket Size L large", url: "http://e.com/i03-large"})
+    size_lower =
+      insert_item(%{size: "m", title: "Jacket Size m lowercase", url: "http://e.com/i03-lower"})
+
+    size_upper =
+      insert_item(%{size: "M", title: "Jacket Size M uppercase", url: "http://e.com/i03-upper"})
+
+    size_large =
+      insert_item(%{size: "L", title: "Jacket Size L large", url: "http://e.com/i03-large"})
 
     upsert_both(size_lower)
     upsert_both(size_upper)
@@ -172,8 +198,10 @@ defmodule ChatApp.Search.HybridEngineFilterIntegrationTest do
     bypass = open_bypass()
     stub_embedder(bypass)
 
-    ebay_item  = insert_item(%{source: "ebay", title: "Jacket eBay", url: "http://e.com/i06-ebay"})
-    depop_item = insert_item(%{source: "depop", title: "Jacket Depop", url: "http://e.com/i06-depop"})
+    ebay_item = insert_item(%{source: "ebay", title: "Jacket eBay", url: "http://e.com/i06-ebay"})
+
+    depop_item =
+      insert_item(%{source: "depop", title: "Jacket Depop", url: "http://e.com/i06-depop"})
 
     upsert_both(ebay_item)
     upsert_both(depop_item)
@@ -202,17 +230,49 @@ defmodule ChatApp.Search.HybridEngineFilterIntegrationTest do
     bypass = open_bypass()
     stub_embedder(bypass)
 
-    match_all  = insert_item(%{source: "ebay", size: "M", price: "25.00", title: "Jacket Match All", url: "http://e.com/i07-match"})
-    wrong_size = insert_item(%{source: "ebay", size: "L", price: "25.00", title: "Jacket Wrong Size", url: "http://e.com/i07-size"})
-    wrong_src  = insert_item(%{source: "depop", size: "M", price: "25.00", title: "Jacket Wrong Source", url: "http://e.com/i07-src"})
-    over_price = insert_item(%{source: "ebay", size: "M", price: "150.00", title: "Jacket Over Price", url: "http://e.com/i07-price"})
+    match_all =
+      insert_item(%{
+        source: "ebay",
+        size: "M",
+        price: "25.00",
+        title: "Jacket Match All",
+        url: "http://e.com/i07-match"
+      })
+
+    wrong_size =
+      insert_item(%{
+        source: "ebay",
+        size: "L",
+        price: "25.00",
+        title: "Jacket Wrong Size",
+        url: "http://e.com/i07-size"
+      })
+
+    wrong_src =
+      insert_item(%{
+        source: "depop",
+        size: "M",
+        price: "25.00",
+        title: "Jacket Wrong Source",
+        url: "http://e.com/i07-src"
+      })
+
+    over_price =
+      insert_item(%{
+        source: "ebay",
+        size: "M",
+        price: "150.00",
+        title: "Jacket Over Price",
+        url: "http://e.com/i07-price"
+      })
 
     upsert_both(match_all)
     upsert_both(wrong_size)
     upsert_both(wrong_src)
     upsert_both(over_price)
 
-    assert {:ok, results} = HybridEngine.search("jacket", source: :ebay, size: "M", max_price: Decimal.new("50"))
+    assert {:ok, results} =
+             HybridEngine.search("jacket", source: :ebay, size: "M", max_price: Decimal.new("50"))
 
     ids = Enum.map(results, & &1.id)
 
@@ -258,8 +318,11 @@ defmodule ChatApp.Search.HybridEngineFilterIntegrationTest do
     bypass = open_bypass()
     stub_embedder(bypass)
 
-    ebay_item  = insert_item(%{source: "ebay", title: "Jacket eBay Scored", url: "http://e.com/i09-ebay"})
-    depop_item = insert_item(%{source: "depop", title: "Jacket Depop Scored", url: "http://e.com/i09-depop"})
+    ebay_item =
+      insert_item(%{source: "ebay", title: "Jacket eBay Scored", url: "http://e.com/i09-ebay"})
+
+    depop_item =
+      insert_item(%{source: "depop", title: "Jacket Depop Scored", url: "http://e.com/i09-depop"})
 
     upsert_both(ebay_item)
     upsert_both(depop_item)

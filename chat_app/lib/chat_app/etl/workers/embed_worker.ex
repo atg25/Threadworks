@@ -11,7 +11,7 @@ defmodule ChatApp.ETL.Workers.EmbedWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"item_ids" => item_ids}}) do
-    items = Repo.all(from i in ClothingItem, where: i.id in ^item_ids)
+    items = Repo.all(from(i in ClothingItem, where: i.id in ^item_ids))
 
     if items == [] do
       :ok

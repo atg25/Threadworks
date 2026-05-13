@@ -8,7 +8,9 @@ defmodule ChatAppWeb.Sprint17FoundationUpdatesIntegrationTest do
 
     html =
       rendered_to_string(~H"""
-      <ChatAppWeb.CoreComponents.flash kind={:error} title="Error!">Boom</ChatAppWeb.CoreComponents.flash>
+      <ChatAppWeb.CoreComponents.flash kind={:error} title="Error!">
+        Boom
+      </ChatAppWeb.CoreComponents.flash>
       """)
 
     refute html =~ "/35"

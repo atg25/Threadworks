@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-label="Vintage denim jacket">
+  <rect width="640" height="480" fill="#e9eef2"/>
+  <rect x="190" y="70" width="260" height="330" rx="32" fill="#315f8d"/>
+  <path d="M210 118 320 210 430 118" fill="#234b72"/>
+  <path d="M190 124 112 332q-8 24 16 33l52 20 50-148zM450 124l78 208q8 24-16 33l-52 20-50-148z" fill="#274f78"/>
+  <path d="M320 210v190M238 186h164M238 260h164" stroke="#bcd0df" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="320" cy="246" r="8" fill="#f4c76b"/>
+  <circle cx="320" cy="302" r="8" fill="#f4c76b"/>
+  <text x="320" y="445" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#1f2937">Vintage Denim</text>
+</svg>

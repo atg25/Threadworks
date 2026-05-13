@@ -2,10 +2,11 @@
 id: SP-04-05
 phase: 4
 slug: card-rendering-and-smoke
-status: active
+status: complete
 created: 2026-05-12
 activated_date: 2026-05-12
 estimated_days: 1.5
+completed_date: 2026-05-13
 depends_on:
   - SP-04-04
 ---
@@ -45,6 +46,7 @@ depends_on:
 ```
 
 Renders:
+
 - `<img>` with `src={item.image_url}` and `onerror` fallback to `/images/clothing_placeholder.svg`
 - `item.name` (title)
 - `item.brand` if non-nil

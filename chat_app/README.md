@@ -85,6 +85,29 @@ Or with an IEx shell:
 iex -S mix phx.server
 ```
 
+### Local prototype demo
+
+For a reliable local proof-of-concept demo, seed the curated catalog and use the
+dev-only demo login:
+
+```bash
+mix demo.seed
+mix phx.server
+# open http://localhost:4000/dev/demo-login
+```
+
+`mix demo.seed` creates `demo@threadworks.local`, inserts local demo clothing
+items, updates FTS/vector indexes, pre-populates saved items, and stores user
+preferences. `/dev/demo-login` exists only in dev builds; it logs in the demo
+user and enables deterministic demo chat responses while keeping the real
+RAG/vector retrieval path active.
+
+Suggested demo prompts:
+
+- `How do you work?`
+- `Find me a vintage denim jacket under $100 that works with streetwear.`
+- `Show me something minimal and elevated for dinner.`
+
 ### Tests
 
 ```bash

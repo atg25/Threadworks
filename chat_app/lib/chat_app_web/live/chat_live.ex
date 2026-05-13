@@ -26,6 +26,7 @@ defmodule ChatAppWeb.ChatLive do
     statics: ChatAppWeb.static_paths()
 
   alias Phoenix.LiveView.JS
+  alias ChatApp.Accounts
   alias ChatApp.Conversations
   alias ChatApp.Markdown
   alias ChatApp.Clothing
@@ -33,6 +34,8 @@ defmodule ChatAppWeb.ChatLive do
   alias ChatApp.AI.ResponseParser
   alias ChatAppWeb.SidebarComponent
   import ChatAppWeb.CoreComponents, only: [icon: 1]
+
+  @refresh_sources ["ebay", "depop", "poshmark"]
 
   @impl true
   def mount(params, session, socket) do
@@ -73,19 +76,30 @@ defmodule ChatAppWeb.ChatLive do
         at_bottom: true,
         hero_state: hero_state,
         new_chat_nonce: 0,
+        saved_item_ids: MapSet.new(),
+        last_scraped_at: nil,
         rag_status: :idle,
         response_parser_buffer: "",
         pending_cards: []
       )
 
     if connected?(socket) do
+      current_user = current_user_from_session(session, socket)
+      user_id = current_user && current_user.id
+
+      saved_item_ids =
+        if is_integer(user_id), do: Clothing.list_saved_item_ids(user_id), else: MapSet.new()
+
+      last_scraped_at =
+        if is_integer(user_id), do: latest_saved_item_scrape_at(user_id), else: nil
+
       conversation = Conversations.get_or_create_active(session_id)
       conversations = Conversations.list_conversations(session_id)
 
       messages =
         conversation.id
         |> Conversations.list_messages()
-        |> Enum.map(&%{id: &1.id, role: &1.role, content: &1.content})
+        |> Enum.map(&to_live_message/1)
 
       {:ok,
        assign(socket,
@@ -96,6 +110,9 @@ defmodule ChatAppWeb.ChatLive do
          conversations: conversations,
          usage_totals: Conversations.usage_for_conversation(conversation.id),
          messages: messages,
+         current_user: current_user,
+         saved_item_ids: saved_item_ids,
+         last_scraped_at: last_scraped_at,
          hero_state: socket.assigns.hero_state && messages == []
        )}
     else
@@ -202,7 +219,7 @@ defmodule ChatAppWeb.ChatLive do
 
       messages =
         Conversations.list_messages(conversation.id)
-        |> Enum.map(&%{id: &1.id, role: &1.role, content: &1.content})
+        |> Enum.map(&to_live_message/1)
 
       {:noreply,
        assign(socket,
@@ -240,6 +257,49 @@ defmodule ChatAppWeb.ChatLive do
   @impl true
   def handle_event("close_sidebar", _params, socket) do
     {:noreply, assign(socket, sidebar_open: false)}
+  end
+
+  @impl true
+  def handle_event("save_item", %{"item-id" => item_id}, socket) do
+    with {:ok, item_id_int} <- parse_item_id(item_id),
+         user_id when is_integer(user_id) <- user_id(socket),
+         {:ok, item} <- fetch_item(item_id_int),
+         %Decimal{} = price_at_save <- Map.get(item, :price),
+         {:ok, _} <- Clothing.save_item(user_id, item_id_int, price_at_save) do
+      {:noreply,
+       assign(socket, saved_item_ids: MapSet.put(socket.assigns.saved_item_ids, item_id_int))}
+    else
+      _ -> {:noreply, put_flash(socket, :error, "Unable to save item")}
+    end
+  end
+
+  @impl true
+  def handle_event("unsave_item", %{"item-id" => item_id}, socket) do
+    with {:ok, item_id_int} <- parse_item_id(item_id),
+         user_id when is_integer(user_id) <- user_id(socket),
+         :ok <- Clothing.unsave_item(user_id, item_id_int) do
+      {:noreply,
+       assign(socket, saved_item_ids: MapSet.delete(socket.assigns.saved_item_ids, item_id_int))}
+    else
+      _ -> {:noreply, put_flash(socket, :error, "Unable to remove saved item")}
+    end
+  end
+
+  @impl true
+  def handle_event("refresh_listings", _params, socket) do
+    sources = configured_refresh_sources()
+
+    if sources == [] do
+      {:noreply, put_flash(socket, :info, "No sources configured")}
+    else
+      case enqueue_refresh_jobs(sources) do
+        :ok ->
+          {:noreply, put_flash(socket, :info, "Refreshing listings in the background")}
+
+        {:error, _reason} ->
+          {:noreply, put_flash(socket, :error, "Unable to refresh listings")}
+      end
+    end
   end
 
   @impl true
@@ -405,6 +465,14 @@ defmodule ChatAppWeb.ChatLive do
     {:noreply, assign(socket, rag_status: :idle, response_parser_buffer: "", pending_cards: [])}
   end
 
+  def handle_info({:do_rag, _text}, socket)
+      when socket.assigns.stream_buffer != "" or
+             is_integer(socket.assigns.assistant_message_id) do
+    # Streaming has already started by another path; avoid clobbering the
+    # in-flight assistant message with a second RAG branch.
+    {:noreply, socket}
+  end
+
   def handle_info({:do_rag, text}, socket) do
     conversation_tokens = socket.assigns.usage_totals.total_tokens
 
@@ -414,7 +482,10 @@ defmodule ChatAppWeb.ChatLive do
     case QueryUnderstander.evaluate(items) do
       {:clarify, question} ->
         socket = ensure_conversation(socket)
-        {:ok, row} = Conversations.append_message(socket.assigns.conversation_id, :assistant, question)
+
+        {:ok, row} =
+          Conversations.append_message(socket.assigns.conversation_id, :assistant, question)
+
         assistant_msg = %{id: row.id, role: :assistant, content: question}
 
         {:noreply,
@@ -430,8 +501,8 @@ defmodule ChatAppWeb.ChatLive do
         socket =
           assign(socket,
             rag_status: :streaming,
-            response_parser_buffer: "",
-            pending_cards: [],
+            response_parser_buffer: socket.assigns.response_parser_buffer,
+            pending_cards: socket.assigns.pending_cards,
             stream_task_pid: task_pid
           )
 
@@ -440,42 +511,46 @@ defmodule ChatAppWeb.ChatLive do
   end
 
   @impl true
+  def handle_info({:stream_token, token}, socket)
+      when token in ["", nil] and socket.assigns.is_sending == false and
+             socket.assigns.stream_buffer == "" do
+    {:noreply, socket}
+  end
+
   def handle_info({:stream_token, token}, socket) do
-    if socket.assigns.is_sending == false do
-      {:noreply, socket}
-    else
-      socket = ensure_conversation(socket)
-      {assistant_id, messages} = ensure_assistant_row(socket, socket.assigns.stream_buffer)
+    socket = ensure_conversation(socket)
+    {assistant_id, messages} = ensure_assistant_row(socket, socket.assigns.stream_buffer)
 
-      buffer = socket.assigns.stream_buffer <> token
-      messages = upsert_assistant_message(messages, assistant_id, buffer)
+    buffer = socket.assigns.stream_buffer <> token
 
-      {cards, remaining_buffer} =
-        ResponseParser.parse(token, socket.assigns.response_parser_buffer)
+    {cards, remaining_buffer} =
+      ResponseParser.parse(token, socket.assigns.response_parser_buffer)
 
-      new_cards =
-        Enum.flat_map(cards, fn card ->
-          case Clothing.get_item(card.item_id) do
-            nil -> []
-            item -> [%{item: item, reason: card.reason}]
-          end
-        end)
+    new_cards =
+      Enum.flat_map(cards, fn card ->
+        case Clothing.get_item(card.item_id) do
+          nil -> []
+          item -> [%{item: item, reason: card.reason}]
+        end
+      end)
 
-      socket =
-        socket
-        |> assign(
-          messages: messages,
-          stream_buffer: buffer,
-          assistant_message_id: assistant_id,
-          response_parser_buffer: remaining_buffer,
-          pending_cards: socket.assigns.pending_cards ++ new_cards
-        )
-        |> schedule_persist_timer()
-        |> bump_persist_token_count()
-        |> maybe_persist_by_token_threshold()
+    pending_cards = socket.assigns.pending_cards ++ new_cards
+    messages = upsert_assistant_message(messages, assistant_id, buffer, pending_cards)
 
-      {:noreply, socket}
-    end
+    socket =
+      socket
+      |> assign(
+        messages: messages,
+        stream_buffer: buffer,
+        assistant_message_id: assistant_id,
+        response_parser_buffer: remaining_buffer,
+        pending_cards: pending_cards
+      )
+      |> schedule_persist_timer()
+      |> bump_persist_token_count()
+      |> maybe_persist_by_token_threshold()
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -562,7 +637,24 @@ defmodule ChatAppWeb.ChatLive do
           messages
         end
 
-      pending = socket.assigns.pending_cards
+      pending =
+        case socket.assigns.pending_cards do
+          [] -> cards_from_content(buffer)
+          existing -> existing
+        end
+
+      pending =
+        if pending == [] do
+          case List.last(render_messages) do
+            %{role: :assistant, content: content} when is_binary(content) ->
+              cards_from_content(content)
+
+            _ ->
+              []
+          end
+        else
+          pending
+        end
 
       render_messages =
         if pending != [] do
@@ -615,6 +707,11 @@ defmodule ChatAppWeb.ChatLive do
   end
 
   @impl true
+  def handle_info({:stream_stopped}, socket)
+      when socket.assigns.is_sending == false and socket.assigns.stream_buffer == "" do
+    {:noreply, socket}
+  end
+
   def handle_info({:stream_stopped}, socket) do
     {:noreply,
      assign(socket,
@@ -652,6 +749,11 @@ defmodule ChatAppWeb.ChatLive do
   end
 
   @impl true
+  def handle_info({:stream_error, _reason}, socket)
+      when socket.assigns.is_sending == false and socket.assigns.stream_buffer == "" do
+    {:noreply, socket}
+  end
+
   def handle_info({:stream_error, reason}, socket) do
     socket = ensure_socket_changed(socket)
     messages = drop_last_assistant(socket.assigns.messages)
@@ -846,7 +948,7 @@ defmodule ChatAppWeb.ChatLive do
 
             <%= if @settings_error do %>
               <div class="px-4 py-2 text-xs text-[color:var(--status-error)]" role="alert">
-                <%= @settings_error %>
+                {@settings_error}
               </div>
             <% end %>
 
@@ -965,11 +1067,14 @@ defmodule ChatAppWeb.ChatLive do
                     </div>
                   <% else %>
                     <%= for msg <- @messages do %>
-                      <.message_bubble message={msg} />
+                      <.message_bubble message={msg} saved_item_ids={@saved_item_ids} />
                     <% end %>
                     <%= if @rag_status == :searching do %>
-                      <div data-rag-indicator="searching" class="ui-chat-rag-searching px-4 py-2 text-sm text-foreground/60">
-                        Searching…
+                      <div
+                        data-rag-indicator="searching"
+                        class="ui-chat-rag-searching px-4 py-2 text-sm text-foreground/60"
+                      >
+                        Searching catalog...
                       </div>
                     <% end %>
                     <%= for err <- @errors do %>
@@ -978,7 +1083,7 @@ defmodule ChatAppWeb.ChatLive do
                         data-chat-message-error="true"
                         data-role="assistant"
                       >
-                        Error: <%= display_stream_error_reason(err.reason) %>
+                        Error: {display_stream_error_reason(err.reason)}
                       </div>
                     <% end %>
 
@@ -989,21 +1094,12 @@ defmodule ChatAppWeb.ChatLive do
                       >
                         <div
                           data-typing-skeleton="true"
-                          class="typing-skeleton"
                           aria-label="Assistant is responding"
+                          style="display:flex; align-items:center; gap:0.4rem; padding:0.25rem 0;"
                         >
-                          <div
-                            data-typing-skeleton-line="1"
-                            class="typing-skeleton-line animate-pulse w-11/12"
-                          />
-                          <div
-                            data-typing-skeleton-line="2"
-                            class="typing-skeleton-line animate-pulse w-10/12"
-                          />
-                          <div
-                            data-typing-skeleton-line="3"
-                            class="typing-skeleton-line animate-pulse w-8/12"
-                          />
+                          <span style="display:inline-block; width:0.45rem; height:0.45rem; border-radius:999px; background:currentColor; opacity:0.3; animation:tw-typing-bounce 1.2s ease-in-out infinite; animation-delay:0ms;" />
+                          <span style="display:inline-block; width:0.45rem; height:0.45rem; border-radius:999px; background:currentColor; opacity:0.3; animation:tw-typing-bounce 1.2s ease-in-out infinite; animation-delay:200ms;" />
+                          <span style="display:inline-block; width:0.45rem; height:0.45rem; border-radius:999px; background:currentColor; opacity:0.3; animation:tw-typing-bounce 1.2s ease-in-out infinite; animation-delay:400ms;" />
                         </div>
                       </div>
                     <% end %>
@@ -1046,7 +1142,16 @@ defmodule ChatAppWeb.ChatLive do
                   class="mx-auto mb-2 w-full max-w-3xl rounded-lg border border-[color:color-mix(in_oklab,var(--status-success)_40%,transparent)] bg-[color:color-mix(in_oklab,var(--status-success)_10%,transparent)] px-3 py-2 text-xs text-foreground break-words"
                   role="alert"
                 >
-                  <%= Phoenix.Flash.get(@flash, :info) %>
+                  {Phoenix.Flash.get(@flash, :info)}
+                </div>
+              <% end %>
+
+              <%= if Phoenix.Flash.get(@flash, :error) do %>
+                <div
+                  class="mx-auto mb-2 w-full max-w-3xl rounded-lg border border-[color:color-mix(in_oklab,var(--status-error)_40%,transparent)] bg-[color:color-mix(in_oklab,var(--status-error)_10%,transparent)] px-3 py-2 text-xs text-foreground break-words"
+                  role="alert"
+                >
+                  {Phoenix.Flash.get(@flash, :error)}
                 </div>
               <% end %>
 
@@ -1055,7 +1160,7 @@ defmodule ChatAppWeb.ChatLive do
                   class="mx-auto mb-2 w-full max-w-3xl rounded-lg border border-[color:color-mix(in_oklab,var(--status-error)_40%,transparent)] bg-[color:color-mix(in_oklab,var(--status-error)_10%,transparent)] px-3 py-2 text-xs text-foreground break-words"
                   role="alert"
                 >
-                  <%= @rate_limit_error %>
+                  {@rate_limit_error}
                 </div>
               <% end %>
 
@@ -1092,6 +1197,20 @@ defmodule ChatAppWeb.ChatLive do
                       disabled={@is_sending}
                       data-chat-composer-field="true"
                     ><%= @input %></textarea>
+
+                    <%= if show_regenerate?(@messages, @is_sending) do %>
+                      <div class="shrink-0 self-center ml-[var(--space-1)]">
+                        <button
+                          type="button"
+                          phx-click="regenerate"
+                          data-message-action="regenerate"
+                          class="icon-btn focus-ring rounded-[var(--fva-shell-radius-control)] p-[var(--space-3)] transition-all active:scale-95 text-foreground/60 hover:text-foreground"
+                          aria-label="Regenerate"
+                        >
+                          <.icon name="hero-arrow-path" class="size-4" />
+                        </button>
+                      </div>
+                    <% end %>
 
                     <%= if @is_sending do %>
                       <div id="composer-action-stop" class="shrink-0 self-center mr-[var(--space-2)]">
@@ -1133,39 +1252,6 @@ defmodule ChatAppWeb.ChatLive do
                     <% end %>
                   </form>
 
-                  <div class="mt-2 min-h-8 flex items-center">
-                    <%= if show_regenerate?(@messages, @is_sending) do %>
-                      <button
-                        type="button"
-                        phx-click="regenerate"
-                        data-message-action="regenerate"
-                        class="icon-btn rounded-full border border-foreground/20 text-xs font-semibold text-foreground/80"
-                        aria-label="Regenerate"
-                      >
-                        <.icon name="hero-arrow-path" class="size-4" />
-                      </button>
-                    <% end %>
-
-                    <button
-                      type="button"
-                      class="icon-btn invisible pointer-events-none"
-                      data-message-action="regenerate"
-                      aria-hidden="true"
-                      tabindex="-1"
-                    >
-                      <.icon name="hero-arrow-path" class="size-4" />
-                    </button>
-
-                    <button
-                      type="button"
-                      class="icon-btn invisible pointer-events-none"
-                      data-message-action="copy"
-                      aria-hidden="true"
-                      tabindex="-1"
-                    >
-                      <.icon name="hero-clipboard" class="size-4" />
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1173,6 +1259,7 @@ defmodule ChatAppWeb.ChatLive do
         </div>
 
         <footer
+          id="site-footer"
           data-site-footer
           class="border-t border-foreground/10 bg-[color:color-mix(in_oklab,var(--background)_92%,black_8%)] px-[var(--space-6)] py-10"
         >
@@ -1269,6 +1356,15 @@ defmodule ChatAppWeb.ChatLive do
           </div>
         </footer>
       </div>
+
+      <button
+        type="button"
+        aria-label="Scroll to footer"
+        onclick="document.querySelector('[data-page-shell]').scrollTo({top: document.getElementById('site-footer').offsetTop, behavior: 'smooth'})"
+        class="fixed bottom-6 right-6 z-50 flex size-10 items-center justify-center rounded-full border border-foreground/20 bg-background/90 shadow-md backdrop-blur-sm transition-all hover:border-foreground/40 hover:shadow-lg active:scale-95"
+      >
+        <.icon name="hero-chevron-down" class="size-5 text-foreground/70" />
+      </button>
     </div>
     """
   end
@@ -1318,13 +1414,16 @@ defmodule ChatAppWeb.ChatLive do
       data-chat-message-role="user"
       data-role="user"
     >
-      <%= @message.content %>
+      {@message.content}
     </div>
     """
   end
 
   defp message_bubble(%{message: %{role: :assistant}} = assigns) do
     assigns = assign_new(assigns, :cards, fn -> Map.get(assigns.message, :cards, []) end)
+    assigns = assign_new(assigns, :saved_item_ids, fn -> MapSet.new() end)
+    assigns = assign(assigns, :demo_rag_debug?, ChatApp.Demo.enabled?())
+    assigns = assign(assigns, :demo_rag_sources, demo_rag_sources(assigns.cards))
 
     ~H"""
     <div
@@ -1334,11 +1433,24 @@ defmodule ChatAppWeb.ChatLive do
       data-role="assistant"
     >
       <div class="prose prose-theme-inherit prose-sm max-w-none" data-assistant-markdown="true">
-        <%= raw(Markdown.to_html(@message.content)) %>
+        {raw(Markdown.to_html(strip_html_comments(@message.content)))}
       </div>
       <%= for card <- @cards do %>
-        <ChatAppWeb.ProductCard.product_card item={card.item} reason={card.reason} saved={false} />
+        <ChatAppWeb.ProductCard.product_card
+          item={card.item}
+          reason={card.reason}
+          saved={MapSet.member?(@saved_item_ids, card.item.id)}
+        />
       <% end %>
+      <p
+        :if={@demo_rag_debug? and @cards != []}
+        class="mt-3 rounded-md border border-foreground/10 bg-foreground/[0.03] px-3 py-2 text-xs text-foreground/62"
+        data-demo-rag-debug="true"
+      >
+        Retrieved from hybrid search: vector + keyword results over local catalog.
+        <span class="font-medium">{length(@cards)} items</span>
+        <span :if={@demo_rag_sources != ""}>from {@demo_rag_sources}</span>.
+      </p>
       <div class="mt-2 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
         <button
           type="button"
@@ -1354,6 +1466,20 @@ defmodule ChatAppWeb.ChatLive do
     """
   end
 
+  defp demo_rag_sources(cards) do
+    cards
+    |> Enum.map(fn %{item: item} -> item.source end)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.map(&source_label/1)
+    |> Enum.join(", ")
+  end
+
+  defp source_label("ebay"), do: "eBay"
+  defp source_label("depop"), do: "Depop"
+  defp source_label("poshmark"), do: "Poshmark"
+  defp source_label(source), do: source
+
   defp hero_intro(assigns) do
     ~H"""
     <div
@@ -1364,25 +1490,25 @@ defmodule ChatAppWeb.ChatLive do
         class="theme-label flex flex-wrap items-center justify-center gap-x-[var(--hero-badge-gap)] gap-y-[var(--phi-2)] text-[length:var(--hero-badge-font-size)] font-bold uppercase tracking-[0.22em]"
         style="margin-bottom: var(--hero-stack-kicker);"
       >
-        <span data-homepage-service-chip="true" class="text-accent-interactive">Chat</span>
+        <span data-homepage-service-chip="true" class="text-accent-interactive">Style</span>
         <span aria-hidden="true" class="text-foreground/30">/</span>
         <span data-homepage-service-chip="true" class="text-foreground/70">Search</span>
         <span aria-hidden="true" class="text-foreground/30">/</span>
-        <span data-homepage-service-chip="true" class="text-foreground/70">Publish</span>
+        <span data-homepage-service-chip="true" class="text-foreground/70">Discover</span>
       </div>
 
       <h2
         class="theme-display text-foreground text-balance"
         style="max-width: var(--hero-title-max-width); font-size: var(--hero-title-font-size); line-height: var(--hero-title-line-height); letter-spacing: var(--tier-display-tracking); font-weight: 560;"
       >
-        One compact system for <em class="not-italic accent-underline">AI-assisted</em> work
+        Your personal <em class="not-italic accent-underline">AI style</em> consultant
       </h2>
 
       <p
         class="theme-body text-foreground/74 measure-comfortable mx-auto"
         style="font-size: var(--hero-body-font-size); line-height: var(--hero-body-line-height); margin-top: var(--hero-stack-body);"
       >
-        Chat with your AI assistant. Ask anything.
+        Describe your vibe, occasion, or budget. Get curated outfit ideas backed by real listings.
       </p>
 
       <div
@@ -1393,10 +1519,10 @@ defmodule ChatAppWeb.ChatLive do
         <%= for %{title: title, body: body} <- proof_points() do %>
           <div class="brand-proof-card" data-homepage-proof-card="true">
             <p class="text-[0.68rem] font-bold uppercase tracking-[0.16em] text-accent-interactive">
-              <%= title %>
+              {title}
             </p>
             <p class="text-[0.92rem] leading-[1.55] text-foreground/82">
-              <%= body %>
+              {body}
             </p>
           </div>
         <% end %>
@@ -1408,17 +1534,16 @@ defmodule ChatAppWeb.ChatLive do
   defp proof_points do
     [
       %{
-        title: "One compact system",
-        body: "Chat, search, jobs, and publishing stay inside one app footprint."
+        title: "Style advice on demand",
+        body: "Tell us your vibe, occasion, or budget and get personalized outfit recommendations instantly."
       },
       %{
-        title: "Background AI workflows",
-        body: "Deferred jobs keep long-running work visible, retryable, and under control."
+        title: "Real listings, curated",
+        body: "Every suggestion is backed by actual secondhand inventory from Depop, Poshmark, and eBay."
       },
       %{
-        title: "Governed by default",
-        body:
-          "Role-aware tools, prompts, and workflow actions stay aligned with the operator model."
+        title: "Semantic search",
+        body: "Natural-language queries surface the right pieces — no keyword guessing required."
       }
     ]
   end
@@ -1438,12 +1563,7 @@ defmodule ChatAppWeb.ChatLive do
         {:deny, _limit} ->
           message = "Slow down — you're sending messages too fast. Please wait a minute."
 
-          {:rate_limited,
-           put_flash(
-             assign(socket, rate_limit_error: message),
-             :error,
-             message
-           )}
+          {:rate_limited, assign(socket, rate_limit_error: message)}
       end
     end
   end
@@ -1589,11 +1709,138 @@ defmodule ChatAppWeb.ChatLive do
   end
 
   defp upsert_assistant_message(messages, message_id, buffer) do
-    assistant = %{id: message_id, role: :assistant, content: buffer}
+    upsert_assistant_message(messages, message_id, buffer, [])
+  end
+
+  defp upsert_assistant_message(messages, message_id, buffer, cards) do
+    assistant = %{id: message_id, role: :assistant, content: buffer, cards: cards}
 
     case List.last(messages) do
       %{role: :assistant} -> List.replace_at(messages, -1, assistant)
       _ -> messages ++ [assistant]
+    end
+  end
+
+  defp to_live_message(%{id: id, role: role, content: content}) do
+    base = %{id: id, role: role, content: content}
+
+    case role do
+      :assistant ->
+        cards = cards_from_content(content)
+        if cards == [], do: base, else: Map.put(base, :cards, cards)
+
+      _ ->
+        base
+    end
+  end
+
+  defp cards_from_content(content) when is_binary(content) do
+    cards =
+      case Jason.decode(content) do
+        {:ok, %{"cards" => full_cards}} when is_list(full_cards) ->
+          Enum.flat_map(full_cards, fn
+            %{"item_id" => item_id, "reason" => reason} -> [%{item_id: item_id, reason: reason}]
+            _ -> []
+          end)
+
+        _ ->
+          {parsed_cards, _remaining_buffer} = ResponseParser.parse(content, "")
+          parsed_cards
+      end
+
+    Enum.flat_map(cards, fn card ->
+      case coerce_item_id(card.item_id) do
+        :error ->
+          []
+
+        {:ok, item_id} ->
+          case Clothing.get_item(item_id) do
+            nil -> []
+            item -> [%{item: item, reason: card.reason}]
+          end
+      end
+    end)
+  end
+
+  defp cards_from_content(_), do: []
+
+  defp coerce_item_id(item_id) when is_integer(item_id) and item_id > 0, do: {:ok, item_id}
+  defp coerce_item_id(item_id) when is_integer(item_id), do: :error
+
+  defp coerce_item_id(item_id) when is_binary(item_id) do
+    case Integer.parse(item_id) do
+      {id, ""} when id > 0 -> {:ok, id}
+      _ -> :error
+    end
+  end
+
+  defp coerce_item_id(_), do: :error
+
+  defp configured_refresh_sources do
+    config = Application.get_env(:chat_app, :scrape_queries, [])
+    entries = List.wrap(config)
+
+    source_entries =
+      entries
+      |> Enum.flat_map(&refresh_source_entry/1)
+      |> Enum.uniq_by(& &1.source)
+
+    if source_entries == [] do
+      case Enum.find(entries, &valid_refresh_query?/1) do
+        nil -> []
+        query -> Enum.map(@refresh_sources, &%{source: &1, query: query})
+      end
+    else
+      source_entries
+    end
+  end
+
+  defp refresh_source_entry(%{"source" => source, "query" => query})
+       when source in @refresh_sources and is_binary(query) and query != "" do
+    [%{source: source, query: query}]
+  end
+
+  defp refresh_source_entry(%{source: source, query: query})
+       when source in @refresh_sources and is_binary(query) and query != "" do
+    [%{source: source, query: query}]
+  end
+
+  defp refresh_source_entry(%{"source" => source}) when source in @refresh_sources do
+    [%{source: source, query: "vintage"}]
+  end
+
+  defp refresh_source_entry(%{source: source}) when source in @refresh_sources do
+    [%{source: source, query: "vintage"}]
+  end
+
+  defp refresh_source_entry({source, query})
+       when source in @refresh_sources and is_binary(query) and query != "" do
+    [%{source: source, query: query}]
+  end
+
+  defp refresh_source_entry({source}) when source in @refresh_sources do
+    [%{source: source, query: "vintage"}]
+  end
+
+  defp refresh_source_entry(source) when source in @refresh_sources do
+    [%{source: source, query: "vintage"}]
+  end
+
+  defp refresh_source_entry(_entry), do: []
+
+  defp valid_refresh_query?(query), do: is_binary(query) and String.trim(query) != ""
+
+  defp enqueue_refresh_jobs(sources) do
+    results =
+      Enum.map(sources, fn %{source: source, query: query} ->
+        %{"source" => source, "query" => query}
+        |> ChatApp.ETL.Workers.ScrapeWorker.new()
+        |> ChatApp.Repo.insert()
+      end)
+
+    case Enum.find(results, &match?({:error, _}, &1)) do
+      nil -> :ok
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -1654,12 +1901,70 @@ defmodule ChatAppWeb.ChatLive do
 
   defp random_session_id, do: :crypto.strong_rand_bytes(16) |> Base.encode16()
 
+  defp parse_item_id(item_id) when is_binary(item_id) do
+    case Integer.parse(item_id) do
+      {id, ""} -> {:ok, id}
+      _ -> :error
+    end
+  end
+
+  defp parse_item_id(item_id) when is_integer(item_id), do: {:ok, item_id}
+  defp parse_item_id(_), do: :error
+
+  defp fetch_item(item_id) do
+    case Clothing.get_item(item_id) do
+      nil -> :error
+      item -> {:ok, item}
+    end
+  end
+
+  defp latest_saved_item_scrape_at(user_id) do
+    user_id
+    |> Clothing.list_saved_items()
+    |> Enum.map(fn saved -> saved.item && saved.item.last_scraped_at end)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.max(fn -> nil end)
+  end
+
+  defp user_id(socket) do
+    case Map.get(socket.assigns, :current_user) do
+      %{id: id} when is_integer(id) -> id
+      _ -> nil
+    end
+  end
+
+  defp current_user_from_session(session, socket) do
+    case Map.get(socket.assigns, :current_user) do
+      nil ->
+        case session do
+          %{"user_token" => token} when is_binary(token) ->
+            case Accounts.get_user_by_session_token(token) do
+              {user, _authenticated_at} -> user
+              user -> user
+            end
+
+          _ ->
+            nil
+        end
+
+      user ->
+        user
+    end
+  end
+
   defp ensure_socket_changed(%Phoenix.LiveView.Socket{assigns: assigns} = socket) do
     if Map.has_key?(assigns, :__changed__) do
       socket
     else
       %{socket | assigns: Map.put(assigns, :__changed__, %{})}
     end
+  end
+
+  defp strip_html_comments(text) when is_binary(text) do
+    text
+    |> String.replace(~r/<!--.*?-->/s, "")
+    |> String.replace(~r/\{\"cards\":\s*\[.*?\]\}/s, "")
+    |> String.trim()
   end
 
   defp cancel_stream(socket) do

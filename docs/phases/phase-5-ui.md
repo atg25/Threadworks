@@ -1,8 +1,7 @@
 ---
-status: draft
-last_updated: 2026-05-06
-phase: 4
-sub_phase: 5
+status: in-progress
+last_updated: 2026-05-13
+phase: 5
 slug: ui
 complexity: L
 ---
@@ -15,7 +14,7 @@ complexity: L
 
 ## Deliverables
 
-### `lib/chat_app_web/components/product_card.ex`
+### `lib/chat_app_web/components/product_card.ex` ✅ COMPLETE (SP-05-01)
 
 Functional component. Attributes: `item`, `saved` (bool), `reason`.
 
@@ -32,7 +31,7 @@ Renders:
 
 Simple grey clothing-hanger silhouette SVG. Referenced by `onerror` fallback.
 
-### `lib/chat_app_web/live/chat_live.ex` updates
+### `lib/chat_app_web/live/chat_live.ex` updates ✅ COMPLETE (SP-05-04b)
 
 Card rendering:
 - Socket assign `:pending_cards` (list of `%{item: %ClothingItem{}, reason: String.t()}`) populated by `ResponseParser` events during streaming
@@ -56,7 +55,7 @@ handle_event("refresh_listings", _, socket)
 
 Socket assigns to add: `:saved_item_ids` (MapSet, loaded on mount from `Clothing.list_saved_item_ids(user_id)`), `:rag_status` (`:idle | :searching | :streaming`), `:last_scraped_at` (loaded on mount).
 
-### `lib/chat_app/clothing.ex` additions
+### `lib/chat_app/clothing.ex` additions ✅ COMPLETE (SP-05-02)
 
 ```elixir
 save_item(user_id, item_id, price_at_save)
@@ -109,6 +108,17 @@ Add below existing email/password settings:
 | Style keywords | Comma-separated text input | JSON array in `user_preferences.style_keywords` |
 
 Save on submit via `ChatApp.Accounts.save_preferences(user_id, attrs)` → upsert `user_preferences`.
+
+### Phase Progress
+
+- **SP-05-01:** complete
+- **SP-05-02:** complete
+- **SP-05-03:** complete
+- **SP-05-04a:** complete
+- **SP-05-04b:** complete
+- **SP-05-05:** planned
+
+- **Phase 5:** In progress (5 of 6 sprint records complete; SP-05-01, SP-05-02, SP-05-03, SP-05-04a, and SP-05-04b done).
 
 ### Chat sidebar additions
 

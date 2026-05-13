@@ -4,7 +4,7 @@ defmodule ChatApp.AccountsTest do
   alias ChatApp.Accounts
 
   import ChatApp.AccountsFixtures
-  alias ChatApp.Accounts.{User, UserToken}
+  alias ChatApp.Accounts.{User, UserPreferences, UserToken}
 
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do
@@ -199,6 +199,115 @@ defmodule ChatApp.AccountsTest do
       assert changeset.valid?
       assert get_change(changeset, :password) == "new valid password"
       assert is_nil(get_change(changeset, :hashed_password))
+    end
+  end
+
+  describe "save_preferences/2" do
+    test "preferences_parse_brands_trims_and_filters_empty_tokens" do
+      user = user_fixture()
+
+      assert {:ok, _preferences} =
+               Accounts.save_preferences(user.id, %{
+                 "brands" => "Nike,  , Adidas,,Reformation "
+               })
+
+      preferences = Repo.get_by!(UserPreferences, user_id: user.id)
+      assert Jason.decode!(preferences.brands) == ["Nike", "Adidas", "Reformation"]
+    end
+
+    test "preferences_persist_sizes_as_json_array" do
+      user = user_fixture()
+
+      assert {:ok, _preferences} =
+               Accounts.save_preferences(user.id, %{"sizes" => ["S", "M", "L"]})
+
+      preferences = Repo.get_by!(UserPreferences, user_id: user.id)
+      assert Jason.decode!(preferences.sizes) == ["S", "M", "L"]
+    end
+
+    test "preferences_rejects_non_numeric_budget_values" do
+      user = user_fixture()
+
+      assert {:error, changeset} =
+               Accounts.save_preferences(user.id, %{
+                 "budget_min" => "abc",
+                 "budget_max" => "50"
+               })
+
+      assert %{budget_min: ["must be a number"]} = errors_on(changeset)
+      refute Repo.get_by(UserPreferences, user_id: user.id)
+    end
+
+    test "preferences_rejects_budget_min_greater_than_max" do
+      user = user_fixture()
+
+      assert {:error, changeset} =
+               Accounts.save_preferences(user.id, %{
+                 "budget_min" => "100",
+                 "budget_max" => "50"
+               })
+
+      assert %{budget_min: ["must be less than or equal to budget max"]} = errors_on(changeset)
+      refute Repo.get_by(UserPreferences, user_id: user.id)
+    end
+
+    test "preferences_form_happy_path_persists_exact_types" do
+      user = user_fixture()
+
+      assert {:ok, _preferences} =
+               Accounts.save_preferences(user.id, %{
+                 "sizes" => ["S", "M"],
+                 "brands" => "Nike, Reformation",
+                 "budget_min" => "10",
+                 "budget_max" => "150",
+                 "style_keywords" => "vintage, street"
+               })
+
+      preferences = Repo.get_by!(UserPreferences, user_id: user.id)
+      assert Jason.decode!(preferences.sizes) == ["S", "M"]
+      assert Jason.decode!(preferences.brands) == ["Nike", "Reformation"]
+      assert Jason.decode!(preferences.style_keywords) == ["vintage", "street"]
+      assert preferences.budget_min == Decimal.new("10.00")
+      assert preferences.budget_max == Decimal.new("150.00")
+    end
+
+    test "preferences_handles_empty_optional_fields" do
+      user = user_fixture()
+
+      assert {:ok, _preferences} =
+               Accounts.save_preferences(user.id, %{
+                 "brands" => "",
+                 "style_keywords" => "",
+                 "budget_min" => "",
+                 "budget_max" => ""
+               })
+
+      preferences = Repo.get_by!(UserPreferences, user_id: user.id)
+      assert Jason.decode!(preferences.brands) == []
+      assert Jason.decode!(preferences.style_keywords) == []
+      assert is_nil(preferences.budget_min)
+      assert is_nil(preferences.budget_max)
+    end
+
+    test "save_preferences upserts and returns the persisted row" do
+      user = user_fixture()
+
+      assert {:ok, first} =
+               Accounts.save_preferences(user.id, %{
+                 "brands" => "Nike",
+                 "budget_min" => "10"
+               })
+
+      assert {:ok, second} =
+               Accounts.save_preferences(user.id, %{
+                 "brands" => "Adidas",
+                 "budget_min" => "20"
+               })
+
+      assert first.id == second.id
+      assert second.budget_min == Decimal.new("20.00")
+      assert Jason.decode!(second.brands) == ["Adidas"]
+      assert Repo.aggregate(UserPreferences, :count, :id) == 1
     end
   end
 

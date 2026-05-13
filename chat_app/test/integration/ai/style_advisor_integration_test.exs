@@ -30,7 +30,10 @@ defmodule ChatApp.AI.StyleAdvisorIntegrationTest do
   # ---------------------------------------------------------------------------
 
   test "I1: augment/2 passes the user message verbatim to HybridEngine.search" do
-    expect(ChatApp.Search.MockHybridEngine, :search, fn "blue jeans" -> {:ok, [item_fixture()]} end)
+    expect(ChatApp.Search.MockHybridEngine, :search, fn "blue jeans" ->
+      {:ok, [item_fixture()]}
+    end)
+
     {:ok, _prompt, _items} = StyleAdvisor.augment("blue jeans")
   end
 

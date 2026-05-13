@@ -60,8 +60,8 @@ defmodule ChatApp.AI.QueryUnderstanderTest do
 
     # M2 — :recommend fires with exactly 2 qualifying items among a 10-item list
     test "M2: :recommend fires with exactly 2 qualifying items among a 10-item list" do
-      high  = [%Item{rrf_score: 0.02}, %Item{rrf_score: 0.016}]
-      low   = List.duplicate(%Item{rrf_score: 0.005}, 8)
+      high = [%Item{rrf_score: 0.02}, %Item{rrf_score: 0.016}]
+      low = List.duplicate(%Item{rrf_score: 0.005}, 8)
       items = high ++ low
 
       assert {:recommend, returned} = QueryUnderstander.evaluate(items)

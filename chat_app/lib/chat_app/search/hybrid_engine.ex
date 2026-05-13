@@ -29,17 +29,30 @@ defmodule ChatApp.Search.HybridEngine do
       with {:ok, query_vector} <- Embedder.embed(query_text) do
         processed_query = QueryProcessor.process(query_text)
 
-        vec_task = Task.Supervisor.async_nolink(ChatApp.TaskSupervisor, fn -> VectorStore.search(query_vector, 50) end)
-        fts_task = Task.Supervisor.async_nolink(ChatApp.TaskSupervisor, fn -> FTS5Index.search(processed_query, 50) end)
+        vec_task =
+          Task.Supervisor.async_nolink(ChatApp.TaskSupervisor, fn ->
+            VectorStore.search(query_vector, 50)
+          end)
+
+        fts_task =
+          Task.Supervisor.async_nolink(ChatApp.TaskSupervisor, fn ->
+            FTS5Index.search(processed_query, 50)
+          end)
 
         [vec_result, fts_result] =
           [vec_task, fts_task]
           |> Task.yield_many(@task_timeout)
           |> Enum.map(fn {task, result} ->
             case result do
-              nil -> Task.shutdown(task, :brutal_kill); {:error, :timeout}
-              {:ok, value} -> {:ok, value}
-              {:exit, reason} -> {:error, reason}
+              nil ->
+                Task.shutdown(task, :brutal_kill)
+                {:error, :timeout}
+
+              {:ok, value} ->
+                {:ok, value}
+
+              {:exit, reason} ->
+                {:error, reason}
             end
           end)
 

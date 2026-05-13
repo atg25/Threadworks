@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-label="Faded denim chore jacket">
+  <rect width="640" height="480" fill="#f4f1e8"/>
+  <rect x="170" y="86" width="300" height="320" rx="22" fill="#6e91aa"/>
+  <path d="M170 130 106 338l78 38 58-170zM470 130l64 208-78 38-58-170z" fill="#587d99"/>
+  <path d="M236 94 320 190 404 94" fill="#476d8a"/>
+  <rect x="218" y="235" width="70" height="56" rx="6" fill="#89a9bd"/>
+  <rect x="352" y="235" width="70" height="56" rx="6" fill="#89a9bd"/>
+  <path d="M320 190v214" stroke="#d7e4ec" stroke-width="9"/>
+  <text x="320" y="445" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" fill="#334155">Faded Chore Jacket</text>
+</svg>

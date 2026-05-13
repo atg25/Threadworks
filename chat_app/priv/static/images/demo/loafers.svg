@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-label="Black leather loafers">
+  <rect width="640" height="480" fill="#eceff1"/>
+  <path d="M132 290c58-54 144-74 236-54 54 12 100 42 144 78 18 14 28 34 22 58H108c-10-34-2-62 24-82z" fill="#18181b"/>
+  <path d="M210 268c62 18 126 18 190 0" stroke="#3f3f46" stroke-width="18" stroke-linecap="round"/>
+  <path d="M122 368h416" stroke="#0a0a0a" stroke-width="20" stroke-linecap="round"/>
+  <text x="320" y="445" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#1f2937">Leather Loafers</text>
+</svg>

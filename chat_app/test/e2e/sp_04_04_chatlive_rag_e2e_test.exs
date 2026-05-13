@@ -66,10 +66,12 @@ defmodule ChatApp.SP040004ChatLiveRagE2ETest do
     original_openai = Application.get_env(:chat_app, :openai_module)
     Application.put_env(:chat_app, :hybrid_engine_module, ChatApp.Search.HybridEngine)
     Application.put_env(:chat_app, :openai_module, ChatApp.OpenAI)
+
     on_exit(fn ->
       Application.put_env(:chat_app, :hybrid_engine_module, original)
       Application.put_env(:chat_app, :openai_module, original_openai)
     end)
+
     :ok
   end
 
@@ -111,6 +113,7 @@ defmodule ChatApp.SP040004ChatLiveRagE2ETest do
 
       data: [DONE]
       """
+
       Req.Test.text(conn, chunk)
     end)
 
@@ -128,7 +131,7 @@ defmodule ChatApp.SP040004ChatLiveRagE2ETest do
            )
 
     assigns = live_assigns(view)
-    
+
     last_msg = List.last(assigns.messages)
     assert Map.get(last_msg, :cards, []) != []
     assert Enum.all?(last_msg.cards, &match?(%Item{}, &1.item))
@@ -153,8 +156,6 @@ defmodule ChatApp.SP040004ChatLiveRagE2ETest do
     |> element("form[phx-submit='send_message']")
     |> render_submit(%{"input" => "xyzzy abc nonsense query"})
 
-    IO.inspect(live_assigns(view), label: "E2 ASSIGNS")
-    
     assert eventually(
              fn -> live_assigns(view).rag_status == :idle end,
              timeout: 5000

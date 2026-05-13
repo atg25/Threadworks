@@ -44,27 +44,26 @@ config :chat_app, Oban,
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
-       {"0 */2 * * *", ChatApp.ETL.Workers.ScrapeWorker,
-        args: %{"queries" => scrape_queries}}
+       {"0 */2 * * *", ChatApp.ETL.Workers.ScrapeWorker, args: %{"queries" => scrape_queries}}
      ]}
   ]
 
 config :chat_app, :openai_model, "gpt-4o"
 
-config :chat_app, :openai_embeddings_url,
-  System.get_env("OPENAI_EMBEDDINGS_URL", "https://api.openai.com/v1/embeddings")
+config :chat_app,
+       :openai_embeddings_url,
+       System.get_env("OPENAI_EMBEDDINGS_URL", "https://api.openai.com/v1/embeddings")
 
-config :chat_app, :ebay_api_base_url,
-  System.get_env("EBAY_API_BASE_URL", "https://api.ebay.com")
+config :chat_app, :ebay_api_base_url, System.get_env("EBAY_API_BASE_URL", "https://api.ebay.com")
 
 config :chat_app, :ebay_app_id, System.get_env("EBAY_APP_ID", "")
 config :chat_app, :ebay_cert_id, System.get_env("EBAY_CERT_ID", "")
 
-config :chat_app, :depop_api_base_url,
-  System.get_env("DEPOP_API_BASE_URL", "https://api.depop.com")
+config :chat_app,
+       :depop_api_base_url,
+       System.get_env("DEPOP_API_BASE_URL", "https://api.depop.com")
 
-config :chat_app, :poshmark_base_url,
-  System.get_env("POSHMARK_BASE_URL", "https://poshmark.com")
+config :chat_app, :poshmark_base_url, System.get_env("POSHMARK_BASE_URL", "https://poshmark.com")
 
 config :hammer,
   backend:

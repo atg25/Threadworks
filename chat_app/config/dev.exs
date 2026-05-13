@@ -99,4 +99,9 @@ config :chat_app, ChatApp.Repo,
   pool_size: 5,
   show_sensitive_data_on_connection_error: true
 
+# Oban's default database peer expects an `oban_peers` table, which this
+# SQLite dev schema doesn't create. Disable peering locally so the app can
+# boot and the rest of the job pipeline still works.
+config :chat_app, Oban, peer: false
+
 config :swoosh, :api_client, Swoosh.ApiClient.Local

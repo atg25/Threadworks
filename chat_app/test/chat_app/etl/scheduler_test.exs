@@ -119,9 +119,10 @@ defmodule ChatApp.ETL.SchedulerTest do
 
       jobs =
         Repo.all(
-          from j in Oban.Job,
+          from(j in Oban.Job,
             where: j.worker == "ChatApp.ETL.Workers.ScrapeWorker",
             order_by: [asc: j.id]
+          )
         )
 
       assert length(jobs) == 6,

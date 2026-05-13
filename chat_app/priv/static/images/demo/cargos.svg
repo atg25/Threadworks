@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-label="Olive cargo pants">
+  <rect width="640" height="480" fill="#eef0e8"/>
+  <path d="M238 72h164l-22 330h-88L270 178l-22 224h-88z" fill="#586344"/>
+  <path d="M242 72h156M270 178h100" stroke="#404932" stroke-width="10" stroke-linecap="round"/>
+  <rect x="162" y="220" width="76" height="58" rx="8" fill="#6e7952"/>
+  <rect x="402" y="220" width="76" height="58" rx="8" fill="#6e7952"/>
+  <text x="320" y="445" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#1f2937">Olive Cargos</text>
+</svg>

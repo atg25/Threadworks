@@ -102,6 +102,20 @@
     @apply animate-pulse;
   }
 
+  .typing-dot {
+    display: inline-block;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--foreground) 55%, transparent);
+    animation: typing-bounce 1.2s ease-in-out infinite;
+  }
+
+  @keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
+    30% { transform: translateY(-6px); opacity: 1; }
+  }
+
   .site-container {
     width: 100%;
     max-width: var(--container-width);

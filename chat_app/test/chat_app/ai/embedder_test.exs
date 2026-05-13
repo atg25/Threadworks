@@ -10,7 +10,13 @@ defmodule ChatApp.AI.EmbedderTest do
   defp setup_bypass do
     original = Application.get_env(:chat_app, :openai_embeddings_url)
     bypass = Bypass.open()
-    Application.put_env(:chat_app, :openai_embeddings_url, "http://localhost:#{bypass.port}/v1/embeddings")
+
+    Application.put_env(
+      :chat_app,
+      :openai_embeddings_url,
+      "http://localhost:#{bypass.port}/v1/embeddings"
+    )
+
     on_exit(fn -> Application.put_env(:chat_app, :openai_embeddings_url, original) end)
     bypass
   end
@@ -50,6 +56,7 @@ defmodule ChatApp.AI.EmbedderTest do
 
   defp stub_single(bypass, vec) do
     body = mock_embeddings_response([vec])
+
     Bypass.stub(bypass, "POST", "/v1/embeddings", fn conn ->
       conn
       |> Plug.Conn.put_resp_content_type("application/json")
@@ -89,6 +96,7 @@ defmodule ChatApp.AI.EmbedderTest do
     assert {:ok, vec} = Embedder.embed("test")
 
     norm = :math.sqrt(Enum.sum(Enum.map(vec, &(&1 * &1))))
+
     assert abs(norm - 1.0) < 0.001,
            "expected L2 norm close to 1.0, got #{norm}"
   end
@@ -136,6 +144,7 @@ defmodule ChatApp.AI.EmbedderTest do
       [1.0 | List.duplicate(0.0, 511)],
       [0.0, 4.0 | List.duplicate(0.0, 510)]
     ]
+
     body = mock_embeddings_response(raw_vecs)
 
     Bypass.stub(bypass, "POST", "/v1/embeddings", fn conn ->
@@ -235,7 +244,9 @@ defmodule ChatApp.AI.EmbedderTest do
     end)
 
     norm = :math.sqrt(Enum.sum(Enum.map(vec, &(&1 * &1))))
-    assert abs(norm - 1.0) < 0.001, "expected unit norm after near-zero normalization, got #{norm}"
+
+    assert abs(norm - 1.0) < 0.001,
+           "expected unit norm after near-zero normalization, got #{norm}"
   end
 
   # ---------------------------------------------------------------------------
@@ -323,8 +334,11 @@ defmodule ChatApp.AI.EmbedderTest do
 
     assert {:ok, [r0, r1]} = Embedder.embed_batch(["first", "second"])
 
-    assert Enum.at(r0, 0) == 1.0, "expected vec0 first (index 0), got #{inspect(Enum.take(r0, 2))}"
-    assert Enum.at(r1, 1) == 1.0, "expected vec1 second (index 1), got #{inspect(Enum.take(r1, 2))}"
+    assert Enum.at(r0, 0) == 1.0,
+           "expected vec0 first (index 0), got #{inspect(Enum.take(r0, 2))}"
+
+    assert Enum.at(r1, 1) == 1.0,
+           "expected vec1 second (index 1), got #{inspect(Enum.take(r1, 2))}"
   end
 
   # ---------------------------------------------------------------------------

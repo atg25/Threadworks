@@ -33,7 +33,9 @@ defmodule ChatApp.ETL.Sources.EbayBypassHelper do
 
   @doc "Reads and returns the eBay search fixture as a JSON-encoded string."
   def ebay_search_fixture do
-    File.read!(Path.join([File.cwd!(), "test", "support", "http_mocks", "ebay_search_response.json"]))
+    File.read!(
+      Path.join([File.cwd!(), "test", "support", "http_mocks", "ebay_search_response.json"])
+    )
   end
 
   @doc "Stubs the Bypass server to return 500 if any request arrives."
@@ -48,7 +50,10 @@ defmodule ChatApp.ETL.Sources.EbayBypassHelper do
     fn conn ->
       conn
       |> Plug.Conn.put_resp_content_type("application/json")
-      |> Plug.Conn.resp(200, Jason.encode!(%{"access_token" => token, "expires_in" => expires_in}))
+      |> Plug.Conn.resp(
+        200,
+        Jason.encode!(%{"access_token" => token, "expires_in" => expires_in})
+      )
     end
   end
 end

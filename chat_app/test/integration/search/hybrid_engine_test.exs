@@ -12,7 +12,9 @@ defmodule ChatApp.Search.HybridEngineIntegrationTest do
   @embeddings Code.eval_file(Path.join([__DIR__, "../../fixtures/embeddings.exs"])) |> elem(0)
   @fixture_a @embeddings.fixture_a
 
-  @openai_url Application.compile_env(:chat_app, :openai_embeddings_url,
+  @openai_url Application.compile_env(
+                :chat_app,
+                :openai_embeddings_url,
                 "https://api.openai.com/v1/embeddings"
               )
 
@@ -45,16 +47,20 @@ defmodule ChatApp.Search.HybridEngineIntegrationTest do
   defp open_bypass do
     bypass = Bypass.open()
     original = Application.get_env(:chat_app, :openai_embeddings_url)
-    Application.put_env(:chat_app, :openai_embeddings_url, "http://localhost:#{bypass.port}/v1/embeddings")
+
+    Application.put_env(
+      :chat_app,
+      :openai_embeddings_url,
+      "http://localhost:#{bypass.port}/v1/embeddings"
+    )
+
     on_exit(fn -> Application.put_env(:chat_app, :openai_embeddings_url, original) end)
     bypass
   end
 
   defp insert_item(attrs) do
     {:ok, item} =
-      Repo.insert(
-        Item.changeset(%Item{}, Map.merge(%{source: "ebay"}, attrs))
-      )
+      Repo.insert(Item.changeset(%Item{}, Map.merge(%{source: "ebay"}, attrs)))
 
     item
   end
@@ -92,7 +98,9 @@ defmodule ChatApp.Search.HybridEngineIntegrationTest do
     bypass = open_bypass()
     stub_embedder_error(bypass, 500)
 
-    item = insert_item(%{title: "Vintage Levi Denim Jacket", price: "25.00", url: "http://e.com/i03"})
+    item =
+      insert_item(%{title: "Vintage Levi Denim Jacket", price: "25.00", url: "http://e.com/i03"})
+
     :ok = VectorStore.upsert(item.id, @fixture_a)
     :ok = FTS5Index.upsert(item.id)
 
@@ -110,8 +118,20 @@ defmodule ChatApp.Search.HybridEngineIntegrationTest do
     bypass = open_bypass()
     stub_embedder(bypass)
 
-    item_a = insert_item(%{title: "Vintage Levi Denim Jacket Secondhand", price: "25.00", url: "http://e.com/i04a"})
-    item_b = insert_item(%{title: "Pink Silk Evening Gown Formal Wear", price: "80.00", url: "http://e.com/i04b", source: "depop"})
+    item_a =
+      insert_item(%{
+        title: "Vintage Levi Denim Jacket Secondhand",
+        price: "25.00",
+        url: "http://e.com/i04a"
+      })
+
+    item_b =
+      insert_item(%{
+        title: "Pink Silk Evening Gown Formal Wear",
+        price: "80.00",
+        url: "http://e.com/i04b",
+        source: "depop"
+      })
 
     :ok = VectorStore.upsert(item_a.id, @fixture_a)
     :ok = VectorStore.upsert(item_b.id, @fixture_a)
@@ -140,9 +160,27 @@ defmodule ChatApp.Search.HybridEngineIntegrationTest do
     bypass = open_bypass()
     stub_embedder(bypass)
 
-    item_a = insert_item(%{title: "Vintage Levi Denim Jacket Secondhand", price: "25.00", url: "http://e.com/i05a"})
-    item_b = insert_item(%{title: "Pink Silk Evening Gown Formal Wear", price: "80.00", url: "http://e.com/i05b", source: "depop"})
-    item_c = insert_item(%{title: "Denim Jacket Indigo Blue Worn Preloved", price: "35.00", url: "http://e.com/i05c"})
+    item_a =
+      insert_item(%{
+        title: "Vintage Levi Denim Jacket Secondhand",
+        price: "25.00",
+        url: "http://e.com/i05a"
+      })
+
+    item_b =
+      insert_item(%{
+        title: "Pink Silk Evening Gown Formal Wear",
+        price: "80.00",
+        url: "http://e.com/i05b",
+        source: "depop"
+      })
+
+    item_c =
+      insert_item(%{
+        title: "Denim Jacket Indigo Blue Worn Preloved",
+        price: "35.00",
+        url: "http://e.com/i05c"
+      })
 
     :ok = VectorStore.upsert(item_a.id, @fixture_a)
     :ok = VectorStore.upsert(item_b.id, @fixture_a)
@@ -189,6 +227,11 @@ defmodule ChatApp.Search.HybridEngineIntegrationTest do
 
     result = HybridEngine.search("jacket")
 
+    Repo.query!(
+      "CREATE VIRTUAL TABLE IF NOT EXISTS clothing_vec USING vec0(embedding float[512])",
+      []
+    )
+
     assert match?({:error, _}, result),
            "expected {:error, _} when VectorStore Task raises, got: #{inspect(result)}"
   end
@@ -201,8 +244,15 @@ defmodule ChatApp.Search.HybridEngineIntegrationTest do
     bypass = open_bypass()
     stub_embedder(bypass)
 
-    item_a = insert_item(%{title: "Vintage Denim Jacket", price: "30.00", url: "http://e.com/i08a"})
-    item_b = insert_item(%{title: "Vintage Denim Jacket Similar", price: "32.00", url: "http://e.com/i08b"})
+    item_a =
+      insert_item(%{title: "Vintage Denim Jacket", price: "30.00", url: "http://e.com/i08a"})
+
+    item_b =
+      insert_item(%{
+        title: "Vintage Denim Jacket Similar",
+        price: "32.00",
+        url: "http://e.com/i08b"
+      })
 
     :ok = VectorStore.upsert(item_a.id, @fixture_a)
     :ok = VectorStore.upsert(item_b.id, @fixture_a)

@@ -193,6 +193,7 @@ defmodule ChatApp.ETL.Sources.PoshmarkTest do
     Poshmark.fetch_items("vintage levi")
 
     assert_received {:conn, conn}
+
     assert String.contains?(conn.query_string, "query=vintage+levi") or
              String.contains?(conn.query_string, "query=vintage%20levi")
 

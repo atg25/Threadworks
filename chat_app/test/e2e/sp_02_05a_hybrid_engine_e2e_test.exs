@@ -40,7 +40,13 @@ defmodule ChatApp.SP020005aHybridEngineE2ETest do
   defp open_bypass do
     bypass = Bypass.open()
     original = Application.get_env(:chat_app, :openai_embeddings_url)
-    Application.put_env(:chat_app, :openai_embeddings_url, "http://localhost:#{bypass.port}/v1/embeddings")
+
+    Application.put_env(
+      :chat_app,
+      :openai_embeddings_url,
+      "http://localhost:#{bypass.port}/v1/embeddings"
+    )
+
     on_exit(fn -> Application.put_env(:chat_app, :openai_embeddings_url, original) end)
     bypass
   end
@@ -60,9 +66,27 @@ defmodule ChatApp.SP020005aHybridEngineE2ETest do
     bypass = open_bypass()
     stub_embedder(bypass)
 
-    item_a = insert_item(%{title: "Vintage Levi Denim Jacket Secondhand", price: "25.00", url: "http://e.com/e01a"})
-    item_b = insert_item(%{title: "Pink Silk Evening Gown Formal Wear", price: "80.00", url: "http://e.com/e01b", source: "depop"})
-    item_c = insert_item(%{title: "Denim Jacket Indigo Blue Worn Preloved", price: "35.00", url: "http://e.com/e01c"})
+    item_a =
+      insert_item(%{
+        title: "Vintage Levi Denim Jacket Secondhand",
+        price: "25.00",
+        url: "http://e.com/e01a"
+      })
+
+    item_b =
+      insert_item(%{
+        title: "Pink Silk Evening Gown Formal Wear",
+        price: "80.00",
+        url: "http://e.com/e01b",
+        source: "depop"
+      })
+
+    item_c =
+      insert_item(%{
+        title: "Denim Jacket Indigo Blue Worn Preloved",
+        price: "35.00",
+        url: "http://e.com/e01c"
+      })
 
     :ok = VectorStore.upsert(item_a.id, @fixture_a)
     :ok = VectorStore.upsert(item_b.id, @fixture_a)

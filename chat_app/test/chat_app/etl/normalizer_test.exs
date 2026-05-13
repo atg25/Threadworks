@@ -104,7 +104,9 @@ defmodule ChatApp.ETL.NormalizerTest do
   end
 
   test ~s(Poshmark "Like New" text → condition_normalized: "like_new") do
-    result = Normalizer.normalize("poshmark", Map.put(poshmark_raw_item(), "condition", "Like New"))
+    result =
+      Normalizer.normalize("poshmark", Map.put(poshmark_raw_item(), "condition", "Like New"))
+
     assert result.condition_normalized == "like_new"
   end
 

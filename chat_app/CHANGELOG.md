@@ -107,3 +107,9 @@ forward in Keep-a-Changelog style.
   orphaned dead code.
 - `ChatAppWeb.CoreComponents` still contains daisyUI-dependent markup
   even though daisyUI is not installed.
+
+### Changed (Unreleased — 2026-05-12)
+
+- Refactored `ProductCard` component: extracted HEEx `ChatAppWeb.ProductCard` into `lib/chat_app_web/components/product_card_component.ex` and kept legacy wrapper `ChatAppWeb.Components.ProductCard` in `lib/chat_app_web/components/product_card.ex` to preserve compatibility.
+- Hardened `ProductCard` against unsafe inputs: added `sanitize_href/1` and `sanitize_img_src/1`, escaped attribute values, added `aria-label` for accessibility, and improved `format_price/1` handling for Decimal/float/int/string inputs.
+- Added unit, integration, and safety tests for `ProductCard` covering formatting, XSS-safety, and malicious href/img scenarios. Ran `mix format`.

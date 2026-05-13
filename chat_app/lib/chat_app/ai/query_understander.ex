@@ -9,7 +9,8 @@ defmodule ChatApp.AI.QueryUnderstander do
     if length(high_relevance) >= @min_results do
       {:recommend, items}
     else
-      {:clarify, "Could you tell me more about what you're looking for? For example, a style, occasion, or specific item type would help me find better matches."}
+      {:clarify,
+       "Could you tell me more about what you're looking for? For example, a style, occasion, or specific item type would help me find better matches."}
     end
   end
 end

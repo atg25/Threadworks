@@ -9,7 +9,8 @@ defmodule ChatApp.ETL.Deduplicator do
 
     Repo.transaction(fn ->
       case Repo.insert(changeset,
-             on_conflict: {:replace, [:price, :last_scraped_at, :image_url, :size, :condition_normalized]},
+             on_conflict:
+               {:replace, [:price, :last_scraped_at, :image_url, :size, :condition_normalized]},
              conflict_target: [:source, :source_id]
            ) do
         {:ok, item} ->

@@ -138,9 +138,18 @@ defmodule ChatAppWeb.ChatLiveTest do
       assert has_element?(view, "footer[data-site-footer]")
       assert render(view) =~ "About Andrew"
       assert render(view) =~ "About The Project"
-      assert has_element?(view, ~s(footer[data-site-footer] a[href="https://linkedin.com/in/andrew-gardner2026/"]))
+
+      assert has_element?(
+               view,
+               ~s(footer[data-site-footer] a[href="https://linkedin.com/in/andrew-gardner2026/"])
+             )
+
       assert has_element?(view, ~s(footer[data-site-footer] a[href="https://github.com/atg25"]))
-      assert has_element?(view, ~s(footer[data-site-footer] a[href="https://andrewg.vercel.app/"]))
+
+      assert has_element?(
+               view,
+               ~s(footer[data-site-footer] a[href="https://andrewg.vercel.app/"])
+             )
     end
   end
 
@@ -376,5 +385,113 @@ defmodule ChatAppWeb.ChatLiveTest do
       {:ok, _view, html} = live(conn, "/")
       assert html =~ ~r/<button[^>]+aria-label="Send message"/
     end
+  end
+
+  describe "refresh listings" do
+    test "button is rendered when idle", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/")
+
+      assert has_element?(view, "button[data-refresh-listings][aria-label='Refresh listings']")
+    end
+
+    test "click enqueues one scrape job per configured source and shows flash", %{conn: conn} do
+      original = Application.get_env(:chat_app, :scrape_queries)
+
+      on_exit(fn ->
+        case original do
+          nil -> Application.delete_env(:chat_app, :scrape_queries)
+          value -> Application.put_env(:chat_app, :scrape_queries, value)
+        end
+      end)
+
+      Application.put_env(:chat_app, :scrape_queries, [
+        {"ebay", "vintage levi"},
+        {"depop", "vintage levi"},
+        {"poshmark", "vintage levi"}
+      ])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, view, _html} = live(conn, "/")
+
+        html =
+          view
+          |> element("button[data-refresh-listings]")
+          |> render_click()
+
+        assert html =~ "Refreshing listings in the background"
+
+        jobs = scrape_jobs()
+        assert length(jobs) == 3
+
+        assert jobs |> Enum.map(& &1.args["source"]) |> Enum.sort() == [
+                 "depop",
+                 "ebay",
+                 "poshmark"
+               ]
+
+        assert Enum.all?(jobs, &(&1.args["query"] == "vintage levi"))
+      end)
+    end
+
+    test "click handles missing scrape config without enqueueing jobs", %{conn: conn} do
+      original = Application.get_env(:chat_app, :scrape_queries)
+
+      on_exit(fn ->
+        case original do
+          nil -> Application.delete_env(:chat_app, :scrape_queries)
+          value -> Application.put_env(:chat_app, :scrape_queries, value)
+        end
+      end)
+
+      Application.put_env(:chat_app, :scrape_queries, [])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, view, _html} = live(conn, "/")
+
+        html =
+          view
+          |> element("button[data-refresh-listings]")
+          |> render_click()
+
+        assert html =~ "No sources configured"
+        assert scrape_jobs() == []
+      end)
+    end
+
+    test "query-only scrape config enqueues one job for each supported source", %{conn: conn} do
+      original = Application.get_env(:chat_app, :scrape_queries)
+
+      on_exit(fn ->
+        case original do
+          nil -> Application.delete_env(:chat_app, :scrape_queries)
+          value -> Application.put_env(:chat_app, :scrape_queries, value)
+        end
+      end)
+
+      Application.put_env(:chat_app, :scrape_queries, ["test query"])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, view, _html} = live(conn, "/")
+
+        view
+        |> element("button[data-refresh-listings]")
+        |> render_click()
+
+        jobs = scrape_jobs()
+        assert length(jobs) == 3
+        assert Enum.all?(jobs, &(&1.args["query"] == "test query"))
+      end)
+    end
+  end
+
+  defp scrape_jobs do
+    import Ecto.Query
+
+    ChatApp.Repo.all(
+      from(j in Oban.Job,
+        where: j.worker == "ChatApp.ETL.Workers.ScrapeWorker",
+        order_by: [asc: j.id]
+      )
+    )
   end
 end

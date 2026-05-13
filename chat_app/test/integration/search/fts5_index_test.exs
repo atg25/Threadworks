@@ -237,7 +237,11 @@ defmodule ChatApp.Search.FTS5IndexIntegrationTest do
     )
 
     %{rows: [[item_id]]} =
-      Ecto.Adapters.SQL.query!(Repo, "SELECT id FROM clothing_items WHERE url = 'http://e.com/7' LIMIT 1", [])
+      Ecto.Adapters.SQL.query!(
+        Repo,
+        "SELECT id FROM clothing_items WHERE url = 'http://e.com/7' LIMIT 1",
+        []
+      )
 
     assert :ok = FTS5Index.upsert(item_id)
 

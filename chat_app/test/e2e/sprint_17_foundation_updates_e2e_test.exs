@@ -24,7 +24,9 @@ defmodule ChatAppWeb.Sprint17FoundationUpdatesE2ETest do
     assert_has(session, Query.css(".brand-wordmark", text: "Threadworks AI"))
   end
 
-  feature "textarea becomes scrollable instead of hiding text when input exceeds max height", %{session: session} do
+  feature "textarea becomes scrollable instead of hiding text when input exceeds max height", %{
+    session: session
+  } do
     session =
       session
       |> visit("/")
@@ -82,7 +84,9 @@ defmodule ChatAppWeb.Sprint17FoundationUpdatesE2ETest do
     assert_has(session, Query.css("body[data-textarea-scrolled='true']"))
   end
 
-  feature "error alerts render with semantic contrast ratios, not hardcoded colors", %{session: session} do
+  feature "error alerts render with semantic contrast ratios, not hardcoded colors", %{
+    session: session
+  } do
     session =
       session
       |> visit("/")
@@ -99,7 +103,9 @@ defmodule ChatAppWeb.Sprint17FoundationUpdatesE2ETest do
       """)
       |> assert_has(Query.css("body[data-lv-connected='true']"))
       |> assert_has(Query.css("button[phx-click='toggle_settings']"))
-      |> execute_script("document.querySelector(\"button[phx-click='toggle_settings']\")?.click();")
+      |> execute_script(
+        "document.querySelector(\"button[phx-click='toggle_settings']\")?.click();"
+      )
       |> assert_has(Query.css("[data-settings-drawer]"))
 
     session =

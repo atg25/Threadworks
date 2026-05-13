@@ -56,7 +56,7 @@ defmodule ChatApp.Search.QueryProcessorTest do
   test "T-04: process/1 expands \"thrifted\" additively — original term and all three synonyms present" do
     result = QueryProcessor.process("thrifted jacket")
 
-    for term <- ["thrifted", "second-hand", "pre-owned", "vintage"] do
+    for term <- ["thrifted", "secondhand", "preowned", "vintage"] do
       assert result =~ term,
              "expected \"#{term}\" in output, but got: #{inspect(result)}"
     end
@@ -69,8 +69,8 @@ defmodule ChatApp.Search.QueryProcessorTest do
   test "T-05: process/1 expansion uses OR grouping syntax" do
     result = QueryProcessor.process("thrifted jacket")
 
-    assert result =~ "(thrifted or second-hand or pre-owned or vintage)",
-           "expected OR group \"(thrifted or second-hand or pre-owned or vintage)\" in output, got: #{inspect(result)}"
+    assert result =~ "(thrifted OR secondhand OR preowned OR vintage)",
+           "expected OR group \"(thrifted OR secondhand OR preowned OR vintage)\" in output, got: #{inspect(result)}"
   end
 
   # ---------------------------------------------------------------------------
@@ -80,12 +80,13 @@ defmodule ChatApp.Search.QueryProcessorTest do
   test "T-06: process/1 expands \"preloved\"" do
     result = QueryProcessor.process("preloved coat")
 
-    for term <- ["preloved", "pre-owned", "second-hand"] do
+    for term <- ["preloved", "preowned", "secondhand"] do
       assert result =~ term,
              "expected \"#{term}\" in OR group for \"preloved\", but got: #{inspect(result)}"
     end
 
-    assert result =~ ~r/\(preloved or .+ or .+\)/ or result =~ ~r/\(.+or preloved or .+\)/ or result =~ ~r/\(.+or .+ or preloved\)/,
+    assert result =~ ~r/\(preloved OR .+ OR .+\)/ or result =~ ~r/\(.+OR preloved OR .+\)/ or
+             result =~ ~r/\(.+OR .+ OR preloved\)/,
            "expected preloved and synonyms in a single OR group, but got: #{inspect(result)}"
   end
 
@@ -182,11 +183,11 @@ defmodule ChatApp.Search.QueryProcessorTest do
 
   test "T-13: process/1 wraps FTS5 operator tokens in double-quotes" do
     for {input, expected_token} <- [
-      {"NOT jacket", ~s("not")},
-      {"OR dress", ~s("or")},
-      {"AND coat", ~s("and")},
-      {"NEAR boots", ~s("near")}
-    ] do
+          {"NOT jacket", ~s("not")},
+          {"OR dress", ~s("or")},
+          {"AND coat", ~s("and")},
+          {"NEAR boots", ~s("near")}
+        ] do
       result = QueryProcessor.process(input)
 
       assert result =~ expected_token,
@@ -235,8 +236,8 @@ defmodule ChatApp.Search.QueryProcessorTest do
   test "E-01: full pipeline on a realistic multi-term query" do
     result = QueryProcessor.process("Thrifted Y2K Streetwear L Jacket")
 
-    refute result =~ ~r/[A-Z]/,
-           "expected all lowercase output, got uppercase characters: #{inspect(result)}"
+    refute String.replace(result, "OR", "") =~ ~r/[A-Z]/,
+           "expected all lexical terms to be lowercase, got: #{inspect(result)}"
 
     assert result =~ ~r/\bl\b/,
            "expected size term \"l\" preserved (not stripped as stopword), got: #{inspect(result)}"
@@ -244,7 +245,7 @@ defmodule ChatApp.Search.QueryProcessorTest do
     assert result =~ "jacket",
            "expected \"jacket\" in output, got: #{inspect(result)}"
 
-    for term <- ["thrifted", "second-hand", "pre-owned", "vintage"] do
+    for term <- ["thrifted", "secondhand", "preowned", "vintage"] do
       assert result =~ term,
              "expected \"#{term}\" in OR group for \"thrifted\", got: #{inspect(result)}"
     end

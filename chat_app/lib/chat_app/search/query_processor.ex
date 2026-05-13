@@ -43,6 +43,7 @@ defmodule ChatApp.Search.QueryProcessor do
     |> String.replace("'", "")
     |> String.replace(~r/(\w)-(\w)/, "\\1\\2")
     |> String.replace(~r/(?<!\w)-|-(?!\w)/, "")
+    |> String.replace(~r/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/u, "")
   end
 
   defp stopword?(token), do: token in @stopwords
@@ -50,10 +51,22 @@ defmodule ChatApp.Search.QueryProcessor do
   defp expand_synonyms(token) do
     case Map.get(@synonyms, token) do
       nil -> wrap_operator(token)
-      synonyms -> "(#{token} or #{Enum.join(synonyms, " or ")})"
+      synonyms -> token_group([token | synonyms])
     end
   end
 
   defp wrap_operator(token) when token in @fts5_operators, do: ~s("#{token}")
   defp wrap_operator(token), do: token
+
+  defp token_group(tokens) do
+    tokens
+    |> Enum.map(&escape_fts_query/1)
+    |> Enum.map(&quote_phrase/1)
+    |> Enum.join(" OR ")
+    |> then(&"(#{&1})")
+  end
+
+  defp quote_phrase(token) do
+    if String.contains?(token, " "), do: ~s("#{token}"), else: token
+  end
 end

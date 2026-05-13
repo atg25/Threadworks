@@ -124,8 +124,8 @@ defmodule ChatAppWeb.ChatLiveSettingsTest do
       messages = body["messages"]
       # RAG-augmented prompt is the base; user's system_prompt is appended after it.
       assert Enum.any?(messages, fn m ->
-        m["role"] == "system" and String.contains?(m["content"], "Be terse.")
-      end)
+               m["role"] == "system" and String.contains?(m["content"], "Be terse.")
+             end)
     end
   end
 end

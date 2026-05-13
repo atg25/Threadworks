@@ -23,13 +23,19 @@ defmodule ChatApp.Search.HybridEngineUnitTest do
     item2_score = 1.0 / (60 + 2) + 1.0 / (60 + 1)
     item3_score = 1.0 / (60 + 2)
 
-    assert_in_delta scores[1], item1_score, 1.0e-10,
+    assert_in_delta scores[1],
+                    item1_score,
+                    1.0e-10,
                     "item 1 score mismatch: got #{scores[1]}, expected #{item1_score}"
 
-    assert_in_delta scores[2], item2_score, 1.0e-10,
+    assert_in_delta scores[2],
+                    item2_score,
+                    1.0e-10,
                     "item 2 score mismatch: got #{scores[2]}, expected #{item2_score}"
 
-    assert_in_delta scores[3], item3_score, 1.0e-10,
+    assert_in_delta scores[3],
+                    item3_score,
+                    1.0e-10,
                     "item 3 score mismatch: got #{scores[3]}, expected #{item3_score}"
 
     # item 2 has highest score — must be first
@@ -56,7 +62,9 @@ defmodule ChatApp.Search.HybridEngineUnitTest do
     assert Map.has_key?(scores, 5),
            "expected item 5 in result, got: #{inspect(result)}"
 
-    assert_in_delta scores[5], expected_score, 1.0e-10,
+    assert_in_delta scores[5],
+                    expected_score,
+                    1.0e-10,
                     "item 5 score mismatch: got #{scores[5]}, expected #{expected_score}"
   end
 
@@ -77,7 +85,9 @@ defmodule ChatApp.Search.HybridEngineUnitTest do
     assert Map.has_key?(scores, 7),
            "expected item 7 in result, got: #{inspect(result)}"
 
-    assert_in_delta scores[7], expected_score, 1.0e-10,
+    assert_in_delta scores[7],
+                    expected_score,
+                    1.0e-10,
                     "item 7 score: got #{scores[7]}, expected #{expected_score} (2/61)"
   end
 

@@ -17,7 +17,13 @@ defmodule ChatApp.SP040003AugmentE2ETest do
   defp open_bypass do
     bypass = Bypass.open()
     original = Application.get_env(:chat_app, :openai_embeddings_url)
-    Application.put_env(:chat_app, :openai_embeddings_url, "http://localhost:#{bypass.port}/v1/embeddings")
+
+    Application.put_env(
+      :chat_app,
+      :openai_embeddings_url,
+      "http://localhost:#{bypass.port}/v1/embeddings"
+    )
+
     on_exit(fn -> Application.put_env(:chat_app, :openai_embeddings_url, original) end)
     bypass
   end
@@ -60,7 +66,13 @@ defmodule ChatApp.SP040003AugmentE2ETest do
     bypass = open_bypass()
     stub_embedder(bypass)
 
-    item = insert_item(%{title: "Vintage Levi Denim Jacket Secondhand", price: "25.00", url: "http://e.com/e1"})
+    item =
+      insert_item(%{
+        title: "Vintage Levi Denim Jacket Secondhand",
+        price: "25.00",
+        url: "http://e.com/e1"
+      })
+
     :ok = VectorStore.upsert(item.id, @fixture_a)
     :ok = FTS5Index.upsert(item.id)
 

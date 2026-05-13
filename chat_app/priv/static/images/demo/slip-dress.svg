@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-label="Minimal black slip dress">
+  <rect width="640" height="480" fill="#f5f0ec"/>
+  <path d="M250 82h140l-22 122 54 190H218l54-190z" fill="#171717"/>
+  <path d="M250 82 212 36M390 82l38-46" stroke="#171717" stroke-width="10" stroke-linecap="round"/>
+  <path d="M270 122c34 28 66 28 100 0" stroke="#3f3f46" stroke-width="8" fill="none"/>
+  <text x="320" y="445" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#1f2937">Minimal Slip Dress</text>
+</svg>

@@ -65,6 +65,14 @@ defmodule ChatApp.Search.FTS5Index do
   def search("", _top_n), do: []
 
   def search(query_text, top_n) do
+    if String.contains?(query_text, ["(", ")"]) do
+      fallback_search(query_text, top_n)
+    else
+      primary_search(query_text, top_n)
+    end
+  end
+
+  defp primary_search(query_text, top_n) do
     try do
       result =
         Repo.query!(
@@ -76,7 +84,34 @@ defmodule ChatApp.Search.FTS5Index do
         {rowid, if(is_number(score), do: score * 1.0, else: 0.0)}
       end)
     rescue
-      Exqlite.Error -> []
+      Exqlite.Error -> fallback_search(query_text, top_n)
     end
+  end
+
+  defp fallback_search(query_text, top_n) do
+    fallback =
+      query_text
+      |> String.downcase()
+      |> String.replace(~r/[^a-z0-9]+/, " ")
+      |> String.split(~r/\s+/, trim: true)
+      |> Enum.reject(&(&1 in ["and", "or", "not", "near", "find", "show", "works", "something"]))
+      |> Enum.uniq()
+      |> Enum.join(" OR ")
+
+    if fallback == "" do
+      []
+    else
+      result =
+        Repo.query!(
+          "SELECT rowid, bm25(clothing_fts) AS score FROM clothing_fts WHERE clothing_fts MATCH ? ORDER BY score ASC LIMIT ?",
+          [fallback, top_n]
+        )
+
+      Enum.map(result.rows, fn [rowid, score] ->
+        {rowid, if(is_number(score), do: score * 1.0, else: 0.0)}
+      end)
+    end
+  rescue
+    Exqlite.Error -> []
   end
 end

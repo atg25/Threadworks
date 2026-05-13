@@ -38,7 +38,11 @@ defmodule ChatApp.OpenAI.E2EStub do
         send(pid, :stream_done)
       else
         if String.contains?(downcased, "code backgrounds") do
-          send(pid, {:stream_token, "Paragraph with `inline` code.\n\n```elixir\nIO.puts(\"hi\")\n```"})
+          send(
+            pid,
+            {:stream_token, "Paragraph with `inline` code.\n\n```elixir\nIO.puts(\"hi\")\n```"}
+          )
+
           send(pid, :stream_done)
         else
           if String.contains?(downcased, "color inheritance") do

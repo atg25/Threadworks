@@ -33,13 +33,25 @@ defmodule ChatApp.SP020005bFilterOptsPublicApiE2ETest do
   defp open_bypass do
     bypass = Bypass.open()
     original = Application.get_env(:chat_app, :openai_embeddings_url)
-    Application.put_env(:chat_app, :openai_embeddings_url, "http://localhost:#{bypass.port}/v1/embeddings")
+
+    Application.put_env(
+      :chat_app,
+      :openai_embeddings_url,
+      "http://localhost:#{bypass.port}/v1/embeddings"
+    )
+
     on_exit(fn -> Application.put_env(:chat_app, :openai_embeddings_url, original) end)
     bypass
   end
 
   defp insert_item(attrs) do
-    base = %{source: "ebay", price: "25.00", title: "Jacket", url: "http://e.com/#{System.unique_integer()}"}
+    base = %{
+      source: "ebay",
+      price: "25.00",
+      title: "Jacket",
+      url: "http://e.com/#{System.unique_integer()}"
+    }
+
     {:ok, item} = Repo.insert(Item.changeset(%Item{}, Map.merge(base, attrs)))
     item
   end
@@ -57,9 +69,26 @@ defmodule ChatApp.SP020005bFilterOptsPublicApiE2ETest do
     bypass = open_bypass()
     stub_embedder(bypass)
 
-    ebay_a = insert_item(%{source: "ebay", title: "Vintage Jacket eBay A", url: "http://e.com/e01-ebay-a"})
-    ebay_b = insert_item(%{source: "ebay", title: "Vintage Jacket eBay B", url: "http://e.com/e01-ebay-b"})
-    depop  = insert_item(%{source: "depop", title: "Vintage Jacket Depop", url: "http://e.com/e01-depop"})
+    ebay_a =
+      insert_item(%{
+        source: "ebay",
+        title: "Vintage Jacket eBay A",
+        url: "http://e.com/e01-ebay-a"
+      })
+
+    ebay_b =
+      insert_item(%{
+        source: "ebay",
+        title: "Vintage Jacket eBay B",
+        url: "http://e.com/e01-ebay-b"
+      })
+
+    depop =
+      insert_item(%{
+        source: "depop",
+        title: "Vintage Jacket Depop",
+        url: "http://e.com/e01-depop"
+      })
 
     upsert_both(ebay_a)
     upsert_both(ebay_b)
@@ -96,7 +125,13 @@ defmodule ChatApp.SP020005bFilterOptsPublicApiE2ETest do
     stub_embedder(bypass)
 
     for i <- 1..5 do
-      item = insert_item(%{price: "500.00", title: "Expensive Jacket #{i}", url: "http://e.com/e02-#{i}"})
+      item =
+        insert_item(%{
+          price: "500.00",
+          title: "Expensive Jacket #{i}",
+          url: "http://e.com/e02-#{i}"
+        })
+
       upsert_both(item)
     end
 

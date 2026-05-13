@@ -48,7 +48,13 @@ defmodule ChatAppWeb.SidebarComponent do
             class="mx-3 mb-2 rounded-md border border-dashed border-foreground/20 p-3 text-xs text-foreground/65"
           >
             <div class="mb-2 inline-flex items-center justify-center rounded-md bg-foreground/5 p-2">
-              <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8">
+              <svg
+                viewBox="0 0 24 24"
+                class="size-4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+              >
                 <path d="M4 6h16M4 12h10M4 18h7" stroke-linecap="round" />
               </svg>
             </div>
@@ -71,7 +77,7 @@ defmodule ChatAppWeb.SidebarComponent do
                     if(conv.id == @current_id, do: "font-semibold", else: "text-foreground/70")
                 }
               >
-                <%= conv.title || "Untitled" %>
+                {conv.title || "Untitled"}
               </button>
 
               <div class="flex gap-1">

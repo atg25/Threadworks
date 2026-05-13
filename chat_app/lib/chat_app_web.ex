@@ -88,6 +88,8 @@ defmodule ChatAppWeb do
       import Phoenix.HTML
       # Core UI components
       import ChatAppWeb.CoreComponents
+      # Import project function components for templates (dev QA pages rely on these)
+      import ChatAppWeb.ProductCard
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS

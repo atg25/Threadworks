@@ -23,7 +23,10 @@ defmodule ChatApp.ETL.Sources.EbayTest do
     Bypass.expect_once(bypass, "POST", @token_path, fn conn ->
       conn
       |> Plug.Conn.put_resp_content_type("application/json")
-      |> Plug.Conn.resp(200, Jason.encode!(%{"access_token" => token, "expires_in" => expires_in}))
+      |> Plug.Conn.resp(
+        200,
+        Jason.encode!(%{"access_token" => token, "expires_in" => expires_in})
+      )
     end)
   end
 
@@ -42,6 +45,7 @@ defmodule ChatApp.ETL.Sources.EbayTest do
 
   test "get_token/0 returns cached token without HTTP when cache valid", %{bypass: bypass} do
     TokenCache.put("cached_token", far_future_datetime())
+
     Bypass.stub(bypass, "POST", @token_path, fn conn ->
       Plug.Conn.resp(conn, 500, "should not be called")
     end)
@@ -74,7 +78,10 @@ defmodule ChatApp.ETL.Sources.EbayTest do
 
       conn
       |> Plug.Conn.put_resp_content_type("application/json")
-      |> Plug.Conn.resp(200, Jason.encode!(%{"access_token" => "concurrent_token", "expires_in" => 3600}))
+      |> Plug.Conn.resp(
+        200,
+        Jason.encode!(%{"access_token" => "concurrent_token", "expires_in" => 3600})
+      )
     end)
 
     results =
@@ -137,7 +144,10 @@ defmodule ChatApp.ETL.Sources.EbayTest do
     Ebay.fetch_items("vintage levi")
 
     assert_received {:query, query}
-    assert String.contains?(query, "q=vintage+levi") or String.contains?(query, "q=vintage%20levi")
+
+    assert String.contains?(query, "q=vintage+levi") or
+             String.contains?(query, "q=vintage%20levi")
+
     assert String.contains?(query, "category_ids=15724")
     assert String.contains?(query, "11450")
     assert String.contains?(query, "limit=50")

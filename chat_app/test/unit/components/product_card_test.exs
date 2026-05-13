@@ -161,4 +161,40 @@ defmodule ChatAppWeb.ProductCardTest do
     assert html =~ "Like new"
     refute html =~ "like_new"
   end
+
+  # ---------------------------------------------------------------------------
+  # U8 — condition_normalized takes precedence for badge display (spec field)
+  # ---------------------------------------------------------------------------
+
+  test "U8: condition_normalized drives badge when present" do
+    item = item_fixture(%{condition_normalized: "good", condition: "raw_scraped_value"})
+
+    html =
+      render_component(&ProductCard.product_card/1,
+        item: item,
+        reason: "",
+        saved: false
+      )
+
+    assert html =~ "Good"
+    refute html =~ "raw_scraped_value"
+  end
+
+  # ---------------------------------------------------------------------------
+  # U9 — javascript: href in item.url is sanitized (HEEx component path)
+  # ---------------------------------------------------------------------------
+
+  test "U9: javascript href in item.url is sanitized to # in HEEx component" do
+    item = item_fixture(%{url: "javascript:alert(document.cookie)"})
+
+    html =
+      render_component(&ProductCard.product_card/1,
+        item: item,
+        reason: "",
+        saved: false
+      )
+
+    refute html =~ "javascript:"
+    assert html =~ ~s(href="#")
+  end
 end

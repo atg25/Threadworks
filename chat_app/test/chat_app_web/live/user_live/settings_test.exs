@@ -2,6 +2,8 @@ defmodule ChatAppWeb.UserLive.SettingsTest do
   use ChatAppWeb.ConnCase
 
   alias ChatApp.Accounts
+  alias ChatApp.Accounts.UserPreferences
+  alias ChatApp.Repo
   import Phoenix.LiveViewTest
   import ChatApp.AccountsFixtures
 
@@ -157,6 +159,102 @@ defmodule ChatAppWeb.UserLive.SettingsTest do
       assert result =~ "Save Password"
       assert result =~ "should be at least 12 character(s)"
       assert result =~ "does not match password"
+    end
+  end
+
+  describe "preferences form" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "preferences_form_happy_path_persists_and_renders", %{conn: conn, user: user} do
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      result =
+        lv
+        |> element("#preferences_form")
+        |> render_submit(%{
+          "preferences" => %{
+            "sizes" => ["S", "M"],
+            "brands" => "Nike, Reformation",
+            "budget_min" => "10",
+            "budget_max" => "150",
+            "style_keywords" => "vintage, street"
+          }
+        })
+
+      assert result =~ "Preferences saved"
+
+      preferences = Repo.get_by!(UserPreferences, user_id: user.id)
+      assert Jason.decode!(preferences.sizes) == ["S", "M"]
+      assert Jason.decode!(preferences.brands) == ["Nike", "Reformation"]
+      assert Jason.decode!(preferences.style_keywords) == ["vintage", "street"]
+      assert preferences.budget_min == Decimal.new("10.00")
+      assert preferences.budget_max == Decimal.new("150.00")
+
+      {:ok, _lv, html} = live(conn, ~p"/users/settings")
+      assert html =~ ~s(id="preferences_sizes_s")
+      assert html =~ ~s(checked)
+      assert html =~ ~s(value="Nike, Reformation")
+      assert html =~ ~s(value="10")
+      assert html =~ ~s(value="150")
+      assert html =~ ~s(value="vintage, street")
+    end
+
+    test "preferences_persist_sizes_as_json_array and re-mount checks boxes", %{
+      conn: conn,
+      user: user
+    } do
+      assert {:ok, _preferences} =
+               Accounts.save_preferences(user.id, %{"sizes" => ["S", "M", "L"]})
+
+      preferences = Repo.get_by!(UserPreferences, user_id: user.id)
+      assert Jason.decode!(preferences.sizes) == ["S", "M", "L"]
+
+      {:ok, _lv, html} = live(conn, ~p"/users/settings")
+      assert html =~ ~s(id="preferences_sizes_s")
+      assert html =~ ~s(id="preferences_sizes_m")
+      assert html =~ ~s(id="preferences_sizes_l")
+      assert html =~ ~s(value="S" checked)
+      assert html =~ ~s(value="M" checked)
+      assert html =~ ~s(value="L" checked)
+    end
+
+    test "preferences_rejects_non_numeric_budget_values with field error", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      result =
+        lv
+        |> element("#preferences_form")
+        |> render_submit(%{
+          "preferences" => %{"budget_min" => "abc", "budget_max" => "50"}
+        })
+
+      assert result =~ "Could not save preferences"
+      assert result =~ "must be a number"
+      refute Repo.get_by(UserPreferences, user_id: user.id)
+    end
+
+    test "preferences_rejects_budget_min_greater_than_max with field error", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      result =
+        lv
+        |> element("#preferences_form")
+        |> render_submit(%{
+          "preferences" => %{"budget_min" => "100", "budget_max" => "50"}
+        })
+
+      assert result =~ "Could not save preferences"
+      assert result =~ "must be less than or equal to budget max"
+      refute Repo.get_by(UserPreferences, user_id: user.id)
     end
   end
 

@@ -111,7 +111,10 @@ defmodule ChatApp.ETL.Sources.DepopTest do
     Depop.fetch_items("vintage levi")
 
     assert_received {:query, query}
-    assert String.contains?(query, "q=vintage+levi") or String.contains?(query, "q=vintage%20levi")
+
+    assert String.contains?(query, "q=vintage+levi") or
+             String.contains?(query, "q=vintage%20levi")
+
     assert String.contains?(query, "limit=24")
   end
 

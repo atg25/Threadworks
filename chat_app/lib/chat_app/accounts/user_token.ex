@@ -13,11 +13,11 @@ defmodule ChatApp.Accounts.UserToken do
   @session_validity_in_days 14
 
   schema "users_tokens" do
-    field :token, :binary
-    field :context, :string
-    field :sent_to, :string
-    field :authenticated_at, :utc_datetime
-    belongs_to :user, ChatApp.Accounts.User
+    field(:token, :binary)
+    field(:context, :string)
+    field(:sent_to, :string)
+    field(:authenticated_at, :utc_datetime)
+    belongs_to(:user, ChatApp.Accounts.User)
 
     timestamps(type: :utc_datetime, updated_at: false)
   end
@@ -57,10 +57,11 @@ defmodule ChatApp.Accounts.UserToken do
   """
   def verify_session_token_query(token) do
     query =
-      from token in by_token_and_context_query(token, "session"),
+      from(token in by_token_and_context_query(token, "session"),
         join: user in assoc(token, :user),
         where: token.inserted_at > ago(@session_validity_in_days, "day"),
         select: {%{user | authenticated_at: token.authenticated_at}, token.inserted_at}
+      )
 
     {:ok, query}
   end
@@ -110,11 +111,12 @@ defmodule ChatApp.Accounts.UserToken do
         hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
 
         query =
-          from token in by_token_and_context_query(hashed_token, "login"),
+          from(token in by_token_and_context_query(hashed_token, "login"),
             join: user in assoc(token, :user),
             where: token.inserted_at > ago(^@magic_link_validity_in_minutes, "minute"),
             where: token.sent_to == user.email,
             select: {user, token}
+          )
 
         {:ok, query}
 
@@ -140,8 +142,9 @@ defmodule ChatApp.Accounts.UserToken do
         hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
 
         query =
-          from token in by_token_and_context_query(hashed_token, context),
+          from(token in by_token_and_context_query(hashed_token, context),
             where: token.inserted_at > ago(@change_email_validity_in_days, "day")
+          )
 
         {:ok, query}
 
@@ -151,6 +154,6 @@ defmodule ChatApp.Accounts.UserToken do
   end
 
   defp by_token_and_context_query(token, context) do
-    from UserToken, where: [token: ^token, context: ^context]
+    from(UserToken, where: [token: ^token, context: ^context])
   end
 end

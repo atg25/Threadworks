@@ -22,7 +22,9 @@ defmodule ChatAppWeb.ChatLiveCardRenderTest do
     deadline = System.monotonic_time(:millisecond) + timeout
 
     Stream.repeatedly(fn -> fun.() end)
-    |> Stream.take_while(fn result -> not result and System.monotonic_time(:millisecond) < deadline end)
+    |> Stream.take_while(fn result ->
+      not result and System.monotonic_time(:millisecond) < deadline
+    end)
     |> Stream.each(fn _ -> :timer.sleep(50) end)
     |> Stream.run()
 
@@ -48,7 +50,14 @@ defmodule ChatAppWeb.ChatLiveCardRenderTest do
   test "I1: cards rendered below assistant message after stream_done", %{conn: conn} do
     item = insert_item(%{title: "Vintage Jacket"})
 
-    rag_item = %Item{id: item.id, title: item.title, price: item.price, url: item.url, source: item.source, rrf_score: 0.05}
+    rag_item = %Item{
+      id: item.id,
+      title: item.title,
+      price: item.price,
+      url: item.url,
+      source: item.source,
+      rrf_score: 0.05
+    }
 
     stub(ChatApp.AI.MockStyleAdvisor, :augment, fn _, _ ->
       {:ok, "base", [rag_item, rag_item]}
@@ -106,7 +115,9 @@ defmodule ChatAppWeb.ChatLiveCardRenderTest do
     {:ok, view, _html} = live(conn, "/")
 
     html =
-      view |> element("form[phx-submit='send_message']") |> render_submit(%{"input" => "test query"})
+      view
+      |> element("form[phx-submit='send_message']")
+      |> render_submit(%{"input" => "test query"})
 
     assert html =~ ~s(data-rag-indicator="searching")
   end
@@ -132,7 +143,14 @@ defmodule ChatAppWeb.ChatLiveCardRenderTest do
        %{conn: conn} do
     item = insert_item(%{title: "Surviving Item"})
 
-    rag_item = %Item{id: item.id, title: item.title, price: item.price, url: item.url, source: item.source, rrf_score: 0.05}
+    rag_item = %Item{
+      id: item.id,
+      title: item.title,
+      price: item.price,
+      url: item.url,
+      source: item.source,
+      rrf_score: 0.05
+    }
 
     stub(ChatApp.AI.MockStyleAdvisor, :augment, fn _, _ ->
       {:ok, "base", [rag_item, rag_item]}
@@ -163,5 +181,45 @@ defmodule ChatAppWeb.ChatLiveCardRenderTest do
     # But the item name must still be visible in the rendered HTML from message struct
     html = render(view)
     assert html =~ item.title
+  end
+
+  test "I6: cards are restored after remounting the chat", %{conn: conn} do
+    item = insert_item(%{title: "Reloaded Card Item"})
+
+    rag_item = %Item{
+      id: item.id,
+      title: item.title,
+      price: item.price,
+      url: item.url,
+      source: item.source,
+      rrf_score: 0.05
+    }
+
+    stub(ChatApp.AI.MockStyleAdvisor, :augment, fn _, _ ->
+      {:ok, "base", [rag_item, rag_item]}
+    end)
+
+    {:ok, view, _html} = live(conn, "/")
+
+    card_json =
+      Jason.encode!(%{"cards" => [%{"item_id" => item.id, "reason" => "Still relevant"}]})
+
+    view |> element("form[phx-submit='send_message']") |> render_submit(%{"input" => "reload"})
+
+    assert wait_until(fn -> live_assigns(view).rag_status == :streaming end)
+
+    send(view.pid, {:stream_token, card_json})
+    send(view.pid, :stream_done)
+
+    assert wait_until(fn -> live_assigns(view).rag_status == :idle end)
+
+    {:ok, reloaded_view, _html} = live(conn, "/")
+
+    assigns = live_assigns(reloaded_view)
+    last_msg = List.last(assigns.messages)
+
+    assert [%{item: %{id: item_id}, reason: "Still relevant"}] = last_msg.cards
+    assert item_id == item.id
+    assert render(reloaded_view) =~ item.title
   end
 end

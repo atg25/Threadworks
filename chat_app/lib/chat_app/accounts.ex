@@ -6,7 +6,7 @@ defmodule ChatApp.Accounts do
   import Ecto.Query, warn: false
   alias ChatApp.Repo
 
-  alias ChatApp.Accounts.{User, UserToken, UserNotifier}
+  alias ChatApp.Accounts.{User, UserNotifier, UserPreferences, UserToken}
 
   ## Database getters
 
@@ -145,6 +145,58 @@ defmodule ChatApp.Accounts do
   """
   def change_user_password(user, attrs \\ %{}, opts \\ []) do
     User.password_changeset(user, attrs, opts)
+  end
+
+  def get_user_preferences(user_id) when is_integer(user_id) do
+    Repo.get_by(UserPreferences, user_id: user_id)
+  end
+
+  def save_preferences(user_id, attrs) when is_integer(user_id) and is_map(attrs) do
+    sizes = attrs |> Map.get("sizes", []) |> normalize_sizes()
+    brands = attrs |> Map.get("brands", "") |> parse_comma_list()
+    style_keywords = attrs |> Map.get("style_keywords", "") |> parse_comma_list()
+    min_raw = Map.get(attrs, "budget_min", "")
+    max_raw = Map.get(attrs, "budget_max", "")
+
+    with {:ok, min_decimal} <- parse_decimal(min_raw, :budget_min),
+         {:ok, max_decimal} <- parse_decimal(max_raw, :budget_max),
+         :ok <- validate_budget_range(min_decimal, max_decimal) do
+      sizes_json = Jason.encode!(sizes)
+      brands_json = Jason.encode!(brands)
+      style_keywords_json = Jason.encode!(style_keywords)
+      budget_min = round_decimal(min_decimal)
+      budget_max = round_decimal(max_decimal)
+
+      changeset =
+        UserPreferences.changeset(%UserPreferences{}, %{
+          user_id: user_id,
+          sizes: sizes_json,
+          brands: brands_json,
+          style_keywords: style_keywords_json,
+          budget_min: budget_min,
+          budget_max: budget_max
+        })
+
+      case Repo.insert(changeset,
+             on_conflict: [
+               set: [
+                 sizes: sizes_json,
+                 brands: brands_json,
+                 style_keywords: style_keywords_json,
+                 budget_min: budget_min,
+                 budget_max: budget_max,
+                 updated_at: DateTime.utc_now() |> DateTime.truncate(:second)
+               ]
+             ],
+             conflict_target: [:user_id]
+           ) do
+        {:ok, _preferences} -> {:ok, get_user_preferences(user_id)}
+        error -> error
+      end
+    else
+      {:error, field, message} ->
+        {:error, add_preference_error(field, message)}
+    end
   end
 
   @doc """
@@ -294,4 +346,54 @@ defmodule ChatApp.Accounts do
       end
     end)
   end
+
+  defp parse_comma_list(raw) when is_binary(raw) do
+    raw
+    |> String.split(",", trim: false)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  defp parse_comma_list(_), do: []
+
+  defp normalize_sizes(sizes) when is_list(sizes), do: sizes
+  defp normalize_sizes(_), do: []
+
+  defp parse_decimal(nil, _field), do: {:ok, nil}
+  defp parse_decimal("", _field), do: {:ok, nil}
+
+  defp parse_decimal(value, field) when is_binary(value) do
+    value = String.trim(value)
+
+    if value == "" do
+      {:ok, nil}
+    else
+      case Decimal.parse(value) do
+        {decimal, ""} -> {:ok, decimal}
+        _ -> {:error, field, "must be a number"}
+      end
+    end
+  end
+
+  defp parse_decimal(_value, field), do: {:error, field, "must be a number"}
+
+  defp validate_budget_range(nil, _max), do: :ok
+  defp validate_budget_range(_min, nil), do: :ok
+
+  defp validate_budget_range(min, max) do
+    case Decimal.compare(min, max) do
+      :gt -> {:error, :budget_min, "must be less than or equal to budget max"}
+      _ -> :ok
+    end
+  end
+
+  defp add_preference_error(field, message) do
+    %UserPreferences{}
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.add_error(field, message)
+  end
+
+  defp round_decimal(nil), do: nil
+
+  defp round_decimal(decimal), do: Decimal.round(decimal, 2)
 end

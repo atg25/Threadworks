@@ -7,7 +7,13 @@ defmodule ChatApp.ETL.Embedder do
   return 512-element vectors compatible with VectorCodec and clothing_vec.
   """
   def embed_batch(texts) when is_list(texts) do
-    url = Application.get_env(:chat_app, :openai_embeddings_url, "https://api.openai.com/v1/embeddings")
+    url =
+      Application.get_env(
+        :chat_app,
+        :openai_embeddings_url,
+        "https://api.openai.com/v1/embeddings"
+      )
+
     api_key = Application.get_env(:chat_app, :openai_api_key)
 
     body = %{

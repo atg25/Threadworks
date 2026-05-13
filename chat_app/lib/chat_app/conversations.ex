@@ -294,7 +294,10 @@ defmodule ChatApp.Conversations do
 
   defp maybe_retry_busy_insert(error, changeset, attempts_left, stacktrace) do
     if sqlite_busy_or_locked?(error) and attempts_left > 1 do
-      delay = (@conversation_insert_retry_attempts - attempts_left + 1) * @conversation_insert_retry_backoff_ms
+      delay =
+        (@conversation_insert_retry_attempts - attempts_left + 1) *
+          @conversation_insert_retry_backoff_ms
+
       Process.sleep(delay)
       insert_with_busy_retry(changeset, attempts_left - 1)
     else

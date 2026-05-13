@@ -172,8 +172,22 @@ defmodule ChatAppWeb.ChatLiveRagTest do
 
     stub(ChatApp.AI.MockStyleAdvisor, :augment, fn _, _ ->
       items = [
-        %Item{id: item_1.id, rrf_score: 0.05, title: "Item One", price: Decimal.new("30.00"), url: "http://e.com/1", source: "ebay"},
-        %Item{id: item_2.id, rrf_score: 0.05, title: "Item Two", price: Decimal.new("30.00"), url: "http://e.com/2", source: "ebay"}
+        %Item{
+          id: item_1.id,
+          rrf_score: 0.05,
+          title: "Item One",
+          price: Decimal.new("30.00"),
+          url: "http://e.com/1",
+          source: "ebay"
+        },
+        %Item{
+          id: item_2.id,
+          rrf_score: 0.05,
+          title: "Item Two",
+          price: Decimal.new("30.00"),
+          url: "http://e.com/2",
+          source: "ebay"
+        }
       ]
 
       {:ok, "augmented prompt", items}
@@ -216,8 +230,22 @@ defmodule ChatAppWeb.ChatLiveRagTest do
 
     stub(ChatApp.AI.MockStyleAdvisor, :augment, fn _, _ ->
       items = [
-        %Item{id: real_item.id, rrf_score: 0.05, title: "Real Item", price: Decimal.new("30.00"), url: "http://e.com/r", source: "ebay"},
-        %Item{id: real_item.id, rrf_score: 0.05, title: "Real Item", price: Decimal.new("30.00"), url: "http://e.com/r2", source: "ebay"}
+        %Item{
+          id: real_item.id,
+          rrf_score: 0.05,
+          title: "Real Item",
+          price: Decimal.new("30.00"),
+          url: "http://e.com/r",
+          source: "ebay"
+        },
+        %Item{
+          id: real_item.id,
+          rrf_score: 0.05,
+          title: "Real Item",
+          price: Decimal.new("30.00"),
+          url: "http://e.com/r2",
+          source: "ebay"
+        }
       ]
 
       {:ok, "augmented prompt", items}
@@ -261,8 +289,22 @@ defmodule ChatAppWeb.ChatLiveRagTest do
        %{conn: conn} do
     stub(ChatApp.AI.MockStyleAdvisor, :augment, fn _, _ ->
       items = [
-        %Item{rrf_score: 0.05, id: 1, title: "X", price: Decimal.new("10.00"), url: "http://e.com", source: "ebay"},
-        %Item{rrf_score: 0.05, id: 2, title: "Y", price: Decimal.new("10.00"), url: "http://e.com/2", source: "ebay"}
+        %Item{
+          rrf_score: 0.05,
+          id: 1,
+          title: "X",
+          price: Decimal.new("10.00"),
+          url: "http://e.com",
+          source: "ebay"
+        },
+        %Item{
+          rrf_score: 0.05,
+          id: 2,
+          title: "Y",
+          price: Decimal.new("10.00"),
+          url: "http://e.com/2",
+          source: "ebay"
+        }
       ]
 
       {:ok, "augmented", items}
